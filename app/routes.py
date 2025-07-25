@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from datetime import datetime
 
 from app import models, schemas
 from .database import get_db
-from .utils import get_luton_flights
-from datetime import datetime
+from .utils import get_luton_flights, validate_flight_assignment
 
 router = APIRouter()
 
@@ -55,8 +55,14 @@ def assign_flight(crew_id: int, flight_id: int, db: Session = Depends(get_db)):
     if not flight:
         raise HTTPException(status_code=404, detail="Flight not found")
 
-    departure_time = datetime(2025, 7, 25, 14, 0)
-    arrival_time = datetime(2025, 7, 25, 16, 0)
+    departure_time = flight.departure_time
+    arrival_time = flight.arrival_time
+
+    if not departure_time or not arrival_time:
+        raise HTTPException(status_code=400, detail="Flight missing departure or arrival time")
+
+    duration_minutes = int((arrival_time - departure_time).total_seconds() / 60)
+    validate_flight_assignment(db, crew_id, flight, departure_time, arrival_time)
 
     #block duplicate assignment to same flight
     already_assigned = db.query(models.CrewSchedule).filter(
@@ -109,6 +115,7 @@ def assign_flight(crew_id: int, flight_id: int, db: Session = Depends(get_db)):
         arrival=arrival_time.strftime("%Y-%m-%d %H:%M"),
         crew_id=crew_id,
         crew_name=crew.name,
+        duration_minutes=duration_minutes
     )
     db.add(new_assignment)
 
@@ -120,6 +127,7 @@ def assign_flight(crew_id: int, flight_id: int, db: Session = Depends(get_db)):
         "message": "Flight assigned successfully",
         "schedule_id": new_schedule.id,
         "assignment_id": new_assignment.id,
+        "duration_minutes": duration_minutes
     }
 
 @router.delete("/assignment/{assignment_id}")
@@ -147,32 +155,37 @@ def get_all_schedules(db: Session = Depends(get_db)):
 
 @router.post("/load-flights")
 def load_flights(db: Session = Depends(get_db)):
-    flights = get_luton_flights()
+    result = get_luton_flights()
+    arrivals = result["arrivals"]
+    departures = result["departures"]
     added = 0
 
-    for flight in flights:
-        flight_number = flight.get("flight", {}).get("iata")
-        origin = flight.get("departure", {}).get("airport")
-        destination = flight.get("arrival", {}).get("airport")
+    for direction, flight_list in [("arrival", arrivals), ("departure", departures)]:
+        for flight in flight_list:
+            flight_number = flight.get("flight", {}).get("iata")
+            origin = flight.get("departure", {}).get("airport")
+            destination = flight.get("arrival", {}).get("airport")
 
-        if not flight_number:
-            continue
+            if not flight_number:
+                continue
 
-        existing = db.query(models.Flight).filter(
-            models.Flight.flight_number == flight_number
-        ).first()
+            existing = db.query(models.Flight).filter(
+                models.Flight.flight_number == flight_number,
+                models.Flight.direction == direction
+            ).first()
 
-        if existing:
-            continue
+            if existing:
+                continue
 
-        new_flight = models.Flight(
-            flight_number=flight_number,
-            origin=origin,
-            destination=destination,
-        )
+            new_flight = models.Flight(
+                flight_number=flight_number,
+                origin=origin,
+                destination=destination,
+                direction=direction
+            )
 
-        db.add(new_flight)
-        added += 1
+            db.add(new_flight)
+            added += 1
 
     db.commit()
     return {"message": f"{added} flights added to the database."}
