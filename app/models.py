@@ -27,6 +27,7 @@ class CrewMember(Base):
 class FlightAssignment(Base):
     __tablename__ = "flight_assignments"
     id = Column(Integer, primary_key=True, index=True)
+    flight_id = Column(Integer, ForeignKey("flights.id"))
     flight_number = Column(String(20))
     departure = Column(String(255))
     arrival = Column(String(255))
@@ -42,10 +43,11 @@ class CrewSchedule(Base):
     __tablename__ = "crew_schedules"
     id = Column(Integer, primary_key=True, index=True)
     crew_id = Column(Integer, ForeignKey("crew_members.id"))
+    crew_name = Column(String(255))
+    flight_id = Column(Integer, ForeignKey("flights.id"))
     flight_number = Column(String(20))
     departure_time = Column(DateTime)
     arrival_time = Column(DateTime)
-    crew_name = Column(String(255))
 
     crew = relationship(
         "CrewMember", back_populates="schedules",
