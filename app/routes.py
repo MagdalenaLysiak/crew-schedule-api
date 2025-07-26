@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from datetime import datetime
 
 from app import models, schemas
 from .database import get_db
-from .utils import get_luton_flights, validate_flight_assignment
+from .utils import validate_flight_assignment, store_luton_flights
 
 router = APIRouter()
 
@@ -34,7 +33,6 @@ def delete_crew(crew_id: int, db: Session = Depends(get_db)):
     crew = db.query(models.CrewMember).filter(models.CrewMember.id == crew_id).first()
     if not crew:
         raise HTTPException(status_code=404, detail="Crew member not found")
-
     #delete related schedules and assignments
     db.query(models.CrewSchedule).filter(models.CrewSchedule.crew_id == crew_id).delete()
     db.query(models.FlightAssignment).filter(models.FlightAssignment.crew_id == crew_id).delete()
@@ -61,9 +59,11 @@ def assign_flight(crew_id: int, flight_id: int, db: Session = Depends(get_db)):
     if not departure_time or not arrival_time:
         raise HTTPException(status_code=400, detail="Flight missing departure or arrival time")
 
-    duration_minutes = int((arrival_time - departure_time).total_seconds() / 60)
-    validate_flight_assignment(db, crew_id, flight, departure_time, arrival_time)
+    duration_minutes = flight.duration_minutes
+    if duration_minutes is None:
+        duration_minutes = 0
 
+    validate_flight_assignment(db, crew_id, flight, departure_time, arrival_time)
     #block duplicate assignment to same flight
     already_assigned = db.query(models.CrewSchedule).filter(
         models.CrewSchedule.crew_id == crew_id,
@@ -71,7 +71,6 @@ def assign_flight(crew_id: int, flight_id: int, db: Session = Depends(get_db)):
     ).first()
     if already_assigned:
         raise HTTPException(status_code=400, detail="Crew member is already assigned to this flight")
-
     #limit 2 flights per crew member per day
     daily_assignments = db.query(models.CrewSchedule).filter(
         models.CrewSchedule.crew_id == crew_id,
@@ -83,7 +82,6 @@ def assign_flight(crew_id: int, flight_id: int, db: Session = Depends(get_db)):
             status_code=400,
             detail="Crew member already has 2 flights scheduled on this day"
         )
-
     #max 2 pilots, 4 attendants per flight
     role = crew.role.lower()
     assignments_for_flight = db.query(models.FlightAssignment).filter(
@@ -113,6 +111,8 @@ def assign_flight(crew_id: int, flight_id: int, db: Session = Depends(get_db)):
         flight_number=flight.flight_number,
         departure=departure_time.strftime("%Y-%m-%d %H:%M"),
         arrival=arrival_time.strftime("%Y-%m-%d %H:%M"),
+        departure_time=departure_time,
+        arrival_time=arrival_time,
         crew_id=crew_id,
         crew_name=crew.name,
         duration_minutes=duration_minutes
@@ -123,11 +123,24 @@ def assign_flight(crew_id: int, flight_id: int, db: Session = Depends(get_db)):
     db.refresh(new_schedule)
     db.refresh(new_assignment)
 
+    origin_tz_info = f" {flight.origin_gmt_offset}" if flight.origin_gmt_offset else ""
+    dest_tz_info = f" {flight.destination_gmt_offset}" if flight.destination_gmt_offset else ""
+
     return {
         "message": "Flight assigned successfully",
         "schedule_id": new_schedule.id,
         "assignment_id": new_assignment.id,
-        "duration_minutes": duration_minutes
+        "duration_minutes": duration_minutes,
+        "duration_text": f"{duration_minutes//60}h {duration_minutes%60}m" if duration_minutes > 0 else "0h 0m",
+        "departure_time": departure_time.strftime('%Y-%m-%d %H:%M') + origin_tz_info,
+        "arrival_time": arrival_time.strftime('%Y-%m-%d %H:%M') + dest_tz_info,
+        "route": f"{flight.origin} → {flight.destination}",
+        "timezone_info": {
+            "origin_timezone": flight.origin_timezone,
+            "destination_timezone": flight.destination_timezone,
+            "origin_gmt_offset": flight.origin_gmt_offset,
+            "destination_gmt_offset": flight.destination_gmt_offset
+        }
     }
 
 @router.delete("/assignment/{assignment_id}")
@@ -135,7 +148,6 @@ def delete_assignment(assignment_id: int, db: Session = Depends(get_db)):
     assignment = db.query(models.FlightAssignment).filter(models.FlightAssignment.id == assignment_id).first()
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
-
     #delete related crew schedule
     schedule = db.query(models.CrewSchedule).filter(
         models.CrewSchedule.crew_id == assignment.crew_id,
@@ -154,41 +166,91 @@ def get_all_schedules(db: Session = Depends(get_db)):
     return db.query(models.CrewSchedule).all()
 
 @router.post("/load-flights")
-def load_flights(db: Session = Depends(get_db)):
-    result = get_luton_flights()
-    arrivals = result["arrivals"]
-    departures = result["departures"]
-    added = 0
+def load_flights(db: Session = Depends(get_db), flight_date: str = None):
+    """Load flights with proper datetime parsing and timezone information"""
+    try:
+        store_luton_flights(db, flight_date)
+        
+        total_flights = db.query(models.Flight).count()
+        
+        return {
+            "message": f"Flights loaded successfully with timezone information. Total flights in database: {total_flights}",
+            "date": flight_date or "today"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load flights: {str(e)}")
 
-    for direction, flight_list in [("arrival", arrivals), ("departure", departures)]:
-        for flight in flight_list:
-            flight_number = flight.get("flight", {}).get("iata")
-            origin = flight.get("departure", {}).get("airport")
-            destination = flight.get("arrival", {}).get("airport")
+@router.get("/debug-flights")
+def debug_flights_data(db: Session = Depends(get_db), flight_date: str = None):
+    """Debug endpoint to check flight data from API with timezone information"""
+    try:
+        from .utils import get_luton_flights, debug_flight_times
+        
+        flights = get_luton_flights(flight_date)
+        
+        for i, flight in enumerate(flights["arrivals"][:3]):
+            debug_flight_times(flight, "arrival")
+            
+        for i, flight in enumerate(flights["departures"][:3]):
+            debug_flight_times(flight, "departure")
+            
+        return {
+            "message": "Check console output for debugging info including timezone data",
+            "arrivals_count": len(flights["arrivals"]),
+            "departures_count": len(flights["departures"])
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Debug failed: {str(e)}")
 
-            if not flight_number:
-                continue
+@router.get("/flights")
+def get_all_flights(db: Session = Depends(get_db)):
+    flights = db.query(models.Flight).all()
+    return [{
+        "id": flight.id,
+        "flight_number": flight.flight_number,
+        "origin": flight.origin,
+        "destination": flight.destination,
+        "direction": flight.direction,
+        "departure_time": flight.departure_time.isoformat() if flight.departure_time else None,
+        "arrival_time": flight.arrival_time.isoformat() if flight.arrival_time else None,
+        "duration_minutes": flight.duration_minutes,
+        "duration_text": flight.duration_text,
+        "timezone_info": {
+            "origin_timezone": flight.origin_timezone,
+            "destination_timezone": flight.destination_timezone,
+            "origin_gmt_offset": flight.origin_gmt_offset,
+            "destination_gmt_offset": flight.destination_gmt_offset
+        }
+    } for flight in flights]
 
-            existing = db.query(models.Flight).filter(
-                models.Flight.flight_number == flight_number,
-                models.Flight.direction == direction
-            ).first()
-
-            if existing:
-                continue
-
-            new_flight = models.Flight(
-                flight_number=flight_number,
-                origin=origin,
-                destination=destination,
-                direction=direction
-            )
-
-            db.add(new_flight)
-            added += 1
-
-    db.commit()
-    return {"message": f"{added} flights added to the database."}
+@router.get("/flights/{flight_id}")
+def get_flight_details(flight_id: int, db: Session = Depends(get_db)):
+    """Get detailed flight information including timezone data"""
+    flight = db.query(models.Flight).filter(models.Flight.id == flight_id).first()
+    if not flight:
+        raise HTTPException(status_code=404, detail="Flight not found")
+    
+    return {
+        "id": flight.id,
+        "flight_number": flight.flight_number,
+        "origin": flight.origin,
+        "destination": flight.destination,
+        "direction": flight.direction,
+        "departure_time": flight.departure_time.isoformat() if flight.departure_time else None,
+        "arrival_time": flight.arrival_time.isoformat() if flight.arrival_time else None,
+        "duration_minutes": flight.duration_minutes,
+        "duration_text": flight.duration_text,
+        "timezone_info": {
+            "origin_timezone": flight.origin_timezone,
+            "destination_timezone": flight.destination_timezone,
+            "origin_gmt_offset": flight.origin_gmt_offset,
+            "destination_gmt_offset": flight.destination_gmt_offset
+        },
+        "formatted_times": {
+            "departure": f"{flight.departure_time.strftime('%Y-%m-%d %H:%M')} {flight.origin_gmt_offset or ''}" if flight.departure_time else None,
+            "arrival": f"{flight.arrival_time.strftime('%Y-%m-%d %H:%M')} {flight.destination_gmt_offset or ''}" if flight.arrival_time else None
+        }
+    }
 
 @router.delete("/flight/{flight_id}")
 def delete_flight(flight_id: int, db: Session = Depends(get_db)):
@@ -203,3 +265,63 @@ def delete_flight(flight_id: int, db: Session = Depends(get_db)):
     db.delete(flight)
     db.commit()
     return {"message": f"Flight {flight_id} and related schedules/assignments deleted."}
+
+@router.get("/flights/by-date/{date}")
+def get_flights_by_date(date: str, db: Session = Depends(get_db)):
+    """Get all flights for a specific date with timezone information"""
+    try:
+        from datetime import datetime
+        target_date = datetime.strptime(date, "%Y-%m-%d").date()
+        
+        flights = db.query(models.Flight).filter(
+            func.date(models.Flight.departure_time) == target_date
+        ).all()
+        
+        return [{
+            "id": flight.id,
+            "flight_number": flight.flight_number,
+            "origin": flight.origin,
+            "destination": flight.destination,
+            "direction": flight.direction,
+            "departure_time": flight.departure_time.isoformat() if flight.departure_time else None,
+            "arrival_time": flight.arrival_time.isoformat() if flight.arrival_time else None,
+            "duration_text": flight.duration_text,
+            "timezone_info": {
+                "origin_gmt_offset": flight.origin_gmt_offset,
+                "destination_gmt_offset": flight.destination_gmt_offset
+            },
+            "formatted_display": f"{flight.flight_number} ({flight.origin} → {flight.destination}) - {flight.duration_text}"
+        } for flight in flights]
+        
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+# @router.get("/timezone-test")
+# def test_timezone_conversion(db: Session = Depends(get_db)):
+#     try:
+#         from .utils import get_gmt_offset_from_timezone
+#         from datetime import datetime
+        
+#         test_timezones = [
+#             "Europe/London",
+#             "America/New_York", 
+#             "Asia/Tokyo",
+#             "Australia/Sydney",
+#             "Europe/Paris"
+#         ]
+        
+#         results = {}
+#         current_time = datetime.now()
+        
+#         for tz in test_timezones:
+#             gmt_offset = get_gmt_offset_from_timezone(tz, current_time)
+#             results[tz] = gmt_offset
+            
+#         return {
+#             "message": "Timezone conversion test results",
+#             "test_time": current_time.isoformat(),
+#             "results": results
+#         }
+        
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Timezone test failed: {str(e)}")
