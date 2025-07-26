@@ -1,54 +1,34 @@
 import requests
 from datetime import datetime, timedelta, timezone
-import pytz
-from zoneinfo import ZoneInfo
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
 from app import models
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
 from sqlalchemy import func
+import re
+from datetime import datetime
 
 API_KEY = ""
 BASE_URL = "http://api.aviationstack.com/v1/flights"
 
-def get_gmt_offset_from_timezone(timezone_name: str, reference_date: datetime = None) -> str:
-    """
-    TBC:
-    convert timezone name like 'Europe/Paris' to GMT offset like 'GMT+2'.
-    """
-    if not timezone_name:
-        return "GMT+0"
-    
+def get_gmt_offset_from_timezone(tz_name: str, ref_time: datetime = None) -> str:
     try:
-        if reference_date is None:
-            reference_date = datetime.now()
-        
-        tz = ZoneInfo(timezone_name)
-        dt_with_tz = reference_date.replace(tzinfo=tz)
-        
-        #get  UTC offset
-        offset = dt_with_tz.utcoffset()
+        ref_time = ref_time or datetime.utcnow()
+        tz = ZoneInfo(tz_name)
+        local_time = ref_time.astimezone(tz)
+        offset = local_time.utcoffset()
+
         if offset is None:
             return "GMT+0"
-        
-        # hours and minutes offset
-        total_seconds = int(offset.total_seconds())
-        hours = total_seconds // 3600
-        minutes = abs(total_seconds % 3600) // 60
-        
-        #format as GMT+X or GMT-X
-        if hours >= 0:
-            if minutes == 0:
-                return f"GMT+{hours}"
-            else:
-                return f"GMT+{hours}:{minutes:02d}"
-        else:
-            if minutes == 0:
-                return f"GMT{hours}"
-            else:
-                return f"GMT{hours}:{minutes:02d}"
-                
+
+        total_minutes = int(offset.total_seconds() // 60)
+        hours, minutes = divmod(abs(total_minutes), 60)
+        sign = "+" if total_minutes >= 0 else "-"
+        return f"GMT{sign}{hours}" if minutes == 0 else f"GMT{sign}{hours}:{minutes:02d}"
     except Exception as e:
-        print(f"Error converting timezone {timezone_name}: {e}")
+        print(f"[ERROR] Failed to resolve GMT offset for '{tz_name}': {e}")
         return "GMT+0"
 
 def parse_aviationstack_timestamp(timestamp: str, timezone_name: str = None):
@@ -56,8 +36,6 @@ def parse_aviationstack_timestamp(timestamp: str, timezone_name: str = None):
         return None, None, None
 
     try:
-        # parsing the UTC timestamp from API
-        #handling both "Z" and "+00:00" formats
         if timestamp.endswith("Z"):
             dt_utc = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
         else:
@@ -84,61 +62,81 @@ def parse_aviationstack_timestamp(timestamp: str, timezone_name: str = None):
         print(f"[TIMEZONE] Failed to parse {timestamp}: {e}")
         return None, None, None
 
-def calculate_realistic_flight_duration(dep_local: datetime, arr_local: datetime, 
-                                       dep_gmt_offset: str, arr_gmt_offset: str):
+def parse_gmt_offset(offset_str):
+    if not offset_str or not offset_str.startswith("GMT"):
+        return 0.0
+
+    match = re.match(r"GMT([+-])(\d+)(?::(\d+))?", offset_str)
+    if not match:
+        return 0.0
+
+    sign, hours, minutes = match.groups()
+    total_hours = float(hours) + (float(minutes or 0) / 60.0)
+    return total_hours if sign == '+' else -total_hours
+
+def calculate_timezone_adjusted_duration(
+    dep_time: datetime,
+    arr_time: datetime,
+    origin_gmt_offset: str,
+    destination_gmt_offset: str
+):
     """
-    TBC
-    calculating flight duration according to timezone differences
+    Calculate the actual flight duration by converting both times to UTC and calculating the difference
     """
-    if not dep_local or not arr_local:
+    if not dep_time or not arr_time:
         return 0, "0h 0m"
 
     try:
-        print(f"[DURATION] Calculating flight duration:")
-        print(f" Departure: {dep_local.strftime('%Y-%m-%d %H:%M')} {dep_gmt_offset}")
-        print(f" Arrival: {arr_local.strftime('%Y-%m-%d %H:%M')} {arr_gmt_offset}")
+        print(f"[DURATION] Calculating actual flight duration:")
+        print(f" Departure: {dep_time.strftime('%Y-%m-%d %H:%M')} {origin_gmt_offset}")
+        print(f" Arrival: {arr_time.strftime('%Y-%m-%d %H:%M')} {destination_gmt_offset}")
         
-        # Convert both to UTC for accurate calculation
-        dep_utc = dep_local.astimezone(timezone.utc)
-        arr_utc = arr_local.astimezone(timezone.utc)
+        # GMT to hours
+        origin_offset_hours = parse_gmt_offset(origin_gmt_offset)
+        dest_offset_hours = parse_gmt_offset(destination_gmt_offset)
         
-        print(f"Departure UTC: {dep_utc.strftime('%Y-%m-%d %H:%M UTC')}")
-        print(f"Arrival UTC: {arr_utc.strftime('%Y-%m-%d %H:%M UTC')}")
+        print(f" Origin GMT offset: {origin_offset_hours} hours")
+        print(f" Destination GMT offset: {dest_offset_hours} hours")
         
-        # Calculate duration in UTC
-        duration_sec = (arr_utc - dep_utc).total_seconds()
-        duration_min = int(duration_sec // 60)
+        # local times to UTC
+        dep_utc = dep_time - timedelta(hours=origin_offset_hours)
+        arr_utc = arr_time - timedelta(hours=dest_offset_hours)
         
-        print(f"Duration: {duration_min} minutes ({duration_min // 60}h {duration_min % 60}m)")
+        print(f" Departure UTC: {dep_utc.strftime('%Y-%m-%d %H:%M')} UTC")
+        print(f" Arrival UTC: {arr_utc.strftime('%Y-%m-%d %H:%M')} UTC")
         
-        if duration_min <= 0:
-            print(f"Invalid duration: {duration_min} minutes")
+        # actual flight duration in UTC
+        actual_duration_minutes = int((arr_utc - dep_utc).total_seconds() // 60)
+        
+        print(f" Actual flight duration: {actual_duration_minutes} minutes")
+        
+        if actual_duration_minutes <= 0:
+            print(f"Invalid duration: {actual_duration_minutes} minutes")
             return 0, "0h 0m"
         
-        duration_text = f"{duration_min // 60}h {duration_min % 60}m"
-        return duration_min, duration_text
+        # flights shouldn't be longer than 20 hours
+        if actual_duration_minutes > 20 * 60:
+            print(f"Unrealistic duration: {actual_duration_minutes} minutes (>{actual_duration_minutes//60} hours)")
+            return 0, "0h 0m"
+        
+        #convert to hours and minutes
+        hours = actual_duration_minutes // 60
+        minutes = actual_duration_minutes % 60
+        duration_text = f"{hours}h {minutes}m"
+        
+        print(f" Final result: {duration_text}")
+        
+        return actual_duration_minutes, duration_text
         
     except Exception as e:
         print(f"[DURATION] Error: {e}")
         return 0, "0h 0m"
 
+def calculate_realistic_flight_duration(dep_local: datetime, arr_local: datetime, 
+                                       dep_gmt_offset: str, arr_gmt_offset: str):
+    return calculate_timezone_adjusted_duration(dep_local, arr_local, dep_gmt_offset, arr_gmt_offset)
+
 def debug_flight_times(flight_data, direction):
-    """
-    api response structure:
-    {
-        "flight": {"iata": "BA123", "icao": "BAW123"},
-        "departure": {
-            "iata": "LHR",
-            "scheduled": "2025-01-15T14:30:00+00:00",
-            "timezone": "Europe/London"
-        },
-        "arrival": {
-            "iata": "JFK", 
-            "scheduled": "2025-01-15T17:45:00+00:00",
-            "timezone": "America/New_York"
-        }
-    }
-    """
     flight_info = flight_data.get("flight", {})
     flight_number = flight_info.get("iata", "UNKNOWN")
     
@@ -150,7 +148,6 @@ def debug_flight_times(flight_data, direction):
     print(f"Departure: {departure_data.get('iata')} - {departure_data.get('scheduled')} (TZ: {departure_data.get('timezone')})")
     print(f"Arrival: {arrival_data.get('iata')} - {arrival_data.get('scheduled')} (TZ: {arrival_data.get('timezone')})")
     
-    # test timezone conversion
     dep_time, dep_tz, dep_offset = parse_aviationstack_timestamp(
         departure_data.get("scheduled"), departure_data.get("timezone")
     )
@@ -235,37 +232,67 @@ def store_luton_flights(db: Session, flight_date: str = None):
         dep_timezone = departure_data.get("timezone")
         arr_timezone = arrival_data.get("timezone")
         
-        print(f"Timezones: {dep_timezone} → {arr_timezone}")
+        print(f"Raw timezones from API: dep='{dep_timezone}', arr='{arr_timezone}'")
 
-        dep_actual, dep_tz, dep_gmt = parse_aviationstack_timestamp(
-            departure_data.get("actual"), dep_timezone
-        )
-        dep_scheduled, _, _ = parse_aviationstack_timestamp(
-            departure_data.get("scheduled"), dep_timezone
-        )
-        departure_time = dep_actual or dep_scheduled
-        
-        arr_actual, arr_tz, arr_gmt = parse_aviationstack_timestamp(
-            arrival_data.get("actual"), arr_timezone
-        )
-        arr_scheduled, _, _ = parse_aviationstack_timestamp(
-            arrival_data.get("scheduled"), arr_timezone
-        )
-        arrival_time = arr_actual or arr_scheduled
+        dep_scheduled_time = departure_data.get("scheduled")
+        dep_actual_time = departure_data.get("actual")
+        arr_scheduled_time = arrival_data.get("scheduled")
+        arr_actual_time = arrival_data.get("actual")
 
-        if not departure_time or not arrival_time:
-            print("Skipping - missing times")
+        dep_time_to_use = dep_actual_time or dep_scheduled_time
+        arr_time_to_use = arr_actual_time or arr_scheduled_time
+
+        if not dep_time_to_use or not arr_time_to_use:
+            print("Skipping - missing critical time data")
             return
 
-        dep_utc = departure_time.astimezone(timezone.utc)
-        arr_utc = arrival_time.astimezone(timezone.utc)
+        # parse UTC timestamps from API
+        dep_utc = datetime.fromisoformat(dep_time_to_use.replace("Z", "+00:00"))
+        arr_utc = datetime.fromisoformat(arr_time_to_use.replace("Z", "+00:00"))
+
+        if dep_utc.tzinfo is None:
+            dep_utc = dep_utc.replace(tzinfo=timezone.utc)
+        if arr_utc.tzinfo is None:
+            arr_utc = arr_utc.replace(tzinfo=timezone.utc)
+
+        # convert to local timezones and get GMT
+        dep_gmt_offset = "GMT+0"
+        arr_gmt_offset = "GMT+0"
+        dep_parsed = dep_utc
+        arr_parsed = arr_utc
+        final_dep_timezone = dep_timezone or "UTC"
+        final_arr_timezone = arr_timezone or "UTC"
         
-        if arr_utc <= dep_utc:
-            print(f"ERROR: Arrival UTC ({arr_utc}) ≤ Departure UTC ({dep_utc})")
+        if dep_timezone:
+            try:
+                dep_tz = ZoneInfo(dep_timezone)
+                dep_parsed = dep_utc.astimezone(dep_tz)
+                dep_gmt_offset = get_gmt_offset_from_timezone(dep_timezone, dep_parsed)
+                print(f"Departure: {dep_utc.strftime('%H:%M UTC')} → {dep_parsed.strftime('%H:%M')} {dep_gmt_offset}")
+            except Exception as e:
+                print(f"Failed to convert departure timezone: {e}")
+                final_dep_timezone = "UTC"
+
+        if arr_timezone:
+            try:
+                arr_tz = ZoneInfo(arr_timezone)
+                arr_parsed = arr_utc.astimezone(arr_tz)
+                arr_gmt_offset = get_gmt_offset_from_timezone(arr_timezone, arr_parsed)
+                print(f"Arrival: {arr_utc.strftime('%H:%M UTC')} → {arr_parsed.strftime('%H:%M')} {arr_gmt_offset}")
+            except Exception as e:
+                print(f"Failed to convert arrival timezone: {e}")
+                final_arr_timezone = "UTC"
+
+        dep_utc_check = dep_parsed.astimezone(timezone.utc)
+        arr_utc_check = arr_parsed.astimezone(timezone.utc)
+        
+        if arr_utc_check <= dep_utc_check:
+            print(f"ERROR: Arrival UTC ({arr_utc_check}) ≤ Departure UTC ({dep_utc_check})")
             debug_flight_times(flight, direction)
             return
-        duration_min, duration_text = calculate_realistic_flight_duration(
-            departure_time, arrival_time, dep_gmt or "GMT+0", arr_gmt or "GMT+0"
+
+        duration_min, duration_text = calculate_timezone_adjusted_duration(
+            dep_parsed, arr_parsed, dep_gmt_offset, arr_gmt_offset
         )
 
         if duration_min <= 0 or duration_min > 12 * 60:
@@ -279,11 +306,11 @@ def store_luton_flights(db: Session, flight_date: str = None):
         existing = db.query(models.Flight).filter(
             models.Flight.flight_number == flight_number,
             models.Flight.direction == direction,
-            func.date(models.Flight.departure_time) == departure_time.date()
+            func.date(models.Flight.departure_time) == dep_parsed.date()
         ).first()
 
         if not existing:
-            print(f"Storing: {duration_text} ({origin_iata} {dep_gmt} → {destination_iata} {arr_gmt})")
+            print(f"Storing: {duration_text} ({origin_iata} {dep_gmt_offset} → {destination_iata} {arr_gmt_offset})")
             
             db_flight = models.Flight(
                 flight_number=flight_number,
@@ -292,90 +319,32 @@ def store_luton_flights(db: Session, flight_date: str = None):
                 direction=direction,
                 duration_minutes=duration_min,
                 duration_text=duration_text,
-                departure_time=departure_time,
-                arrival_time=arrival_time,
-                origin_timezone=dep_tz,
-                destination_timezone=arr_tz,
-                origin_gmt_offset=dep_gmt,
-                destination_gmt_offset=arr_gmt
+                departure_time=dep_parsed,
+                arrival_time=arr_parsed,
+                origin_timezone=final_dep_timezone,
+                destination_timezone=final_arr_timezone,
+                origin_gmt_offset=dep_gmt_offset,
+                destination_gmt_offset=arr_gmt_offset
             )
             db.add(db_flight)
         else:
             print("Already exists")
 
-    print("Processing {len(flights['arrivals'])} arrivals...")
+    print(f"Processing {len(flights['arrivals'])} arrivals...")
     for flight in flights["arrivals"]:
         process_flight_record(flight, "arrival")
 
-    print("Processing {len(flights['departures'])} departures...")
+    print(f"Processing {len(flights['departures'])} departures...")
     for flight in flights["departures"]:
         process_flight_record(flight, "departure")
 
     db.commit()
     print("All flights committed to database")
 
-def validate_flight_assignment(
-    db: Session,
-    crew_id: int,
-    flight: models.Flight,
-    departure_time,
-    arrival_time
+def recalculate_duration_with_gmt_offset(
+    dep_time: datetime,
+    arr_time: datetime,
+    origin_gmt_offset: str,
+    destination_gmt_offset: str
 ):
-    #geting all flights for this crew on the same date
-    schedules_today = db.query(models.CrewSchedule).filter(
-        models.CrewSchedule.crew_id == crew_id,
-        func.date(models.CrewSchedule.departure_time) == departure_time.date()
-    ).all()
-
-    #checking for duplicate direction assignment
-    for schedule in schedules_today:
-        if schedule.flight_number == flight.flight_number:
-            raise HTTPException(status_code=400, detail="Crew already assigned to this flight.")
-
-        #only 1 departure and 1 arrival allowed
-        if (flight.direction == "departure" and 
-            schedule.departure_time and 
-            abs((schedule.departure_time - departure_time).total_seconds()) < 300):
-            raise HTTPException(status_code=400, detail="Crew already has a departure around this time.")
-        if (flight.direction == "arrival" and 
-            schedule.arrival_time and 
-            abs((schedule.arrival_time - arrival_time).total_seconds()) < 300):
-            raise HTTPException(status_code=400, detail="Crew already has an arrival around this time.")
-
-    if flight.direction == "arrival":
-        #checking if at least one departure was assigned before
-        departures_today = []
-        for schedule in schedules_today:
-            schedule_flight = db.query(models.Flight).filter(
-                models.Flight.id == schedule.flight_id, 
-                models.Flight.direction == "departure"
-            ).first()
-            if schedule_flight:
-                departures_today.append(schedule)
-        
-        if not departures_today:
-            raise HTTPException(
-                status_code=400, 
-                detail="Arrival flight cannot be assigned before a departure on the same day."
-            )
-
-        latest_departure = max(departures_today, key=lambda x: x.departure_time)
-        min_arrival_time = latest_departure.departure_time + timedelta(hours=1)
-        if arrival_time < min_arrival_time:
-            raise HTTPException(
-                status_code=400, 
-                detail="Arrival is unrealistically soon after departure."
-            )
-
-# def calculate_flight_duration(departure_iso: str, arrival_iso: str) -> int | None:
-#     """Legacy function for backward compatibility"""
-#     try:
-#         dep = datetime.fromisoformat(departure_iso.replace("Z", "+00:00"))
-#         arr = datetime.fromisoformat(arrival_iso.replace("Z", "+00:00"))
-        
-#         if dep and arr:
-#             duration_sec = (arr - dep).total_seconds()
-#             return int(duration_sec // 60)
-#         return None
-#     except Exception:
-#         return None
+    return calculate_timezone_adjusted_duration(dep_time, arr_time, origin_gmt_offset, destination_gmt_offset)
