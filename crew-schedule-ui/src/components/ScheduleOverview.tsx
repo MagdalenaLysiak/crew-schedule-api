@@ -69,6 +69,7 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
                 <th className="text-left p-3">Flight</th>
                 <th className="text-left p-3">Times</th>
                 <th className="text-left p-3">Route</th>
+                <th className="text-left p-3">Duration</th>
                 <th className="text-left p-3">Actions</th>
               </tr>
             </thead>
@@ -86,11 +87,8 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
                       {new Date(schedule.departure_time).toLocaleTimeString()} → {new Date(schedule.arrival_time).toLocaleTimeString()}
                     </div>
                   </td>
-                  <td className="p-3 text-sm">
-                    <div className="text-gray-600">
-                      TBC
-                    </div>
-                  </td>
+                  <td className="p-3">{schedule.origin} → {schedule.destination}</td>
+                  <td className="p-3">{schedule.duration_text}</td>
                   <td className="p-3">
                     <button
                       onClick={() => deleteAssignment(schedule.id)}

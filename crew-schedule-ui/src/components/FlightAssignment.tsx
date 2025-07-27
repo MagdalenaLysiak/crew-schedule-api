@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plane, Search, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Plane, Search, CheckCircle, XCircle } from 'lucide-react';
 import { CrewMember, Flight, AvailabilityCheck, Message } from '../types';
 import { ApiService } from '../services/apiService.ts';
 
@@ -108,12 +108,15 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
               className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Choose flight...</option>
-              {flights.map((flight) => (
-                <option key={flight.id} value={flight.id.toString()}>
-                  {flight.flight_number} - {flight.origin} → {flight.destination}
-                  ({flight.duration_text})
-                </option>
-              ))}
+              {flights.map((flight) => {
+                const depDate = new Date(flight.departure_time);
+                const dateStr = depDate.toLocaleDateString();
+                return (
+                  <option key={flight.id} value={flight.id.toString()}>
+                    {flight.flight_number} - {flight.origin} → {flight.destination} ({flight.duration_text}) [{dateStr}]
+                  </option>
+                )
+              })}
             </select>
           </div>
         </div>
@@ -182,32 +185,39 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
               <tr className="border-b">
                 <th className="text-left p-3">Flight</th>
                 <th className="text-left p-3">Route</th>
+                <th className="text-left p-3">Date</th>
                 <th className="text-left p-3">Times</th>
                 <th className="text-left p-3">Duration</th>
                 <th className="text-left p-3">Direction</th>
               </tr>
             </thead>
             <tbody>
-              {flights.slice(0, 10).map((flight) => (
-                <tr key={flight.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3 font-medium">{flight.flight_number}</td>
-                  <td className="p-3">{flight.origin} → {flight.destination}</td>
-                  <td className="p-3 text-sm">
-                    <div>Dep: {new Date(flight.departure_time).toLocaleTimeString()}</div>
-                    <div>Arr: {new Date(flight.arrival_time).toLocaleTimeString()}</div>
-                  </td>
-                  <td className="p-3">{flight.duration_text}</td>
-                  <td className="p-3">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      flight.direction === 'departure' 
-                        ? 'bg-blue-100 text-blue-800' 
-                        : 'bg-purple-100 text-purple-800'
-                    }`}>
-                      {flight.direction}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {flights.slice(0, 10).map((flight) => {
+                const dep = new Date(flight.departure_time);
+                const arr = new Date(flight.arrival_time);
+                const dateStr = dep.toLocaleDateString();
+                return (
+                  <tr key={flight.id} className="border-b hover:bg-gray-50">
+                    <td className="p-3 font-medium">{flight.flight_number}</td>
+                    <td className="p-3">{flight.origin} → {flight.destination}</td>
+                    <td className="p-3">{dateStr}</td>
+                    <td className="p-3 text-sm">
+                      <div>Dep: {dep.toLocaleTimeString()}</div>
+                      <div>Arr: {arr.toLocaleTimeString()}</div>
+                    </td>
+                    <td className="p-3">{flight.duration_text}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        flight.direction === 'departure' 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : 'bg-purple-100 text-purple-800'
+                      }`}>
+                        {flight.direction}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

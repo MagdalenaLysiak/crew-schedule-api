@@ -29,16 +29,23 @@ def create_crew(crew: schemas.CrewMemberCreate, db: Session = Depends(get_db)):
     db.refresh(db_crew)
     return db_crew
 
-@router.get("/crew/{crew_id}", response_model=schemas.CrewMemberRead)
-def read_crew(crew_id: int, db: Session = Depends(get_db)):
-    crew = db.query(models.CrewMember).filter(models.CrewMember.id == crew_id).first()
-    if not crew:
-        raise HTTPException(status_code=404, detail="Crew member not found")
-    return crew
+@router.get("/crew", response_model=List[schemas.CrewMemberSimple])
+def get_all_crew_members_with_schema(db: Session = Depends(get_db)):
+    try:
+        crew_members = db.query(models.CrewMember).all()
+        logger.info(f"Retrieved {len(crew_members)} crew members")
+        
+        return [schemas.CrewMemberSimple.from_orm_obj(crew) for crew in crew_members]
+        
+    except Exception as e:
+        logger.error(f"Error fetching crew members: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail="Error fetching crew members"
+        )
 
 @router.get("/crew", response_model=List[schemas.CrewMemberRead])
 def get_all_crew_members(db: Session = Depends(get_db)):
-    """Get all crew members"""
     try:
         crew_members = db.query(models.CrewMember).all()
         logger.info(f"Retrieved {len(crew_members)} crew members")
@@ -102,14 +109,15 @@ def assign_flight(crew_id: int, flight_id: int, db: Session = Depends(get_db)):
         flight_number=flight.flight_number,
         departure_time=departure_time,
         arrival_time=arrival_time,
+        origin=flight.origin,
+        destination=flight.destination,
+        duration_text=flight.duration_text,
     )
     db.add(new_schedule)
 
     new_assignment = models.FlightAssignment(
         flight_id=flight.id,
         flight_number=flight.flight_number,
-        departure=departure_time.strftime("%Y-%m-%d %H:%M"),
-        arrival=arrival_time.strftime("%Y-%m-%d %H:%M"),
         departure_time=departure_time,
         arrival_time=arrival_time,
         crew_id=crew_id,

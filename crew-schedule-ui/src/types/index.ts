@@ -28,6 +28,9 @@ export interface Schedule {
   flight_number: string;
   departure_time: string;
   arrival_time: string;
+  origin: string;
+  destination: string;
+  duration_text: string;
 }
 
 export interface AvailabilityCheck {
