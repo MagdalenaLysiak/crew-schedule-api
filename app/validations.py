@@ -224,6 +224,8 @@ def validate_flight_sequence_logic(
     db: Session,
     existing_daily_flights: List[models.CrewSchedule],
     new_flight: models.Flight,
+    departure_time: datetime,
+    arrival_time: datetime,
 ) -> None:
     """
     Validate that crew should have departures before arrivals

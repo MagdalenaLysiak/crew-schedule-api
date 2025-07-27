@@ -10,7 +10,11 @@ from .validations import (
     get_crew_schedule_summary,
     MINIMUM_BUFFER_HOURS
 )
+from typing import List
+import logging
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
 
 VALID_CREW_ROLES = {"pilot", "flight attendant"}
 
@@ -31,6 +35,20 @@ def read_crew(crew_id: int, db: Session = Depends(get_db)):
     if not crew:
         raise HTTPException(status_code=404, detail="Crew member not found")
     return crew
+
+@router.get("/crew", response_model=List[schemas.CrewMemberRead])
+def get_all_crew_members(db: Session = Depends(get_db)):
+    """Get all crew members"""
+    try:
+        crew_members = db.query(models.CrewMember).all()
+        logger.info(f"Retrieved {len(crew_members)} crew members")
+        return crew_members
+    except Exception as e:
+        logger.error(f"Error fetching crew members: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail="Error fetching crew members"
+        )
 
 @router.delete("/crew/{crew_id}")
 def delete_crew(crew_id: int, db: Session = Depends(get_db)):
