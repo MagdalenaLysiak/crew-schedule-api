@@ -26,6 +26,8 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
   const [isChecking, setIsChecking] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   const [isLoadingFlights, setIsLoadingFlights] = useState(false);
+  const [filterDate, setFilterDate] = useState<string>('');
+  const [filterDirection, setFilterDirection] = useState<string>('');
 
   const checkAvailability = async (): Promise<void> => {
     if (!selectedCrew || !selectedFlight) return;
@@ -74,6 +76,13 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
     }
     setIsLoadingFlights(false);
   };
+
+  const filteredFlights = flights.filter((flight) => {
+    const flightDate = new Date(flight.departure_time).toISOString().split('T')[0];
+    const dateMatch = !filterDate || flightDate === filterDate;
+    const directionMatch = !filterDirection || flight.direction === filterDirection;
+    return dateMatch && directionMatch;
+  });
 
   return (
     <div className="space-y-6">
@@ -125,7 +134,7 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
           <button
             onClick={checkAvailability}
             disabled={!selectedCrew || !selectedFlight || loading || isChecking}
-            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 disabled:opacity-50 flex items-center"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 disabled:opacity-50 flex items-center"
           >
             <Search className="mr-2" size={16} />
             {isChecking ? 'Checking...' : 'Check Availability'}
@@ -152,7 +161,12 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
               ) : (
                 <XCircle className="text-red-600 mr-2" size={20} />
               )}
-              <span className="font-medium">{availabilityCheck.message}</span>
+              <span className="font-medium">
+                {availabilityCheck.available 
+                  ? availabilityCheck.message 
+                  : ((availabilityCheck as any).reason || availabilityCheck.message)
+                }
+              </span>
             </div>
 
             {availabilityCheck.available ? (
@@ -169,57 +183,101 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
                 </button>
               </div>
             ) : (
-              availabilityCheck.conflict_details && (
-                <p className="text-sm text-red-600">{availabilityCheck.conflict_details}</p>
-              )
+              <div>
+              </div>
             )}
           </div>
         )}
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold mb-4">Available Flights ({flights.length})</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full table-auto">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left p-3">Flight</th>
-                <th className="text-left p-3">Route</th>
-                <th className="text-left p-3">Date</th>
-                <th className="text-left p-3">Times</th>
-                <th className="text-left p-3">Duration</th>
-                <th className="text-left p-3">Direction</th>
-              </tr>
-            </thead>
-            <tbody>
-              {flights.slice(0, 10).map((flight) => {
-                const dep = new Date(flight.departure_time);
-                const arr = new Date(flight.arrival_time);
-                const dateStr = dep.toLocaleDateString();
-                return (
-                  <tr key={flight.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3 font-medium">{flight.flight_number}</td>
-                    <td className="p-3">{flight.origin} → {flight.destination}</td>
-                    <td className="p-3">{dateStr}</td>
-                    <td className="p-3 text-sm">
-                      <div>Dep: {dep.toLocaleTimeString()}</div>
-                      <div>Arr: {arr.toLocaleTimeString()}</div>
-                    </td>
-                    <td className="p-3">{flight.duration_text}</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        flight.direction === 'departure' 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-purple-100 text-purple-800'
-                      }`}>
-                        {flight.direction}
-                      </span>
+        <h3 className="text-lg font-semibold mb-4">Available Flights ({filteredFlights.length} of {flights.length})</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
+          <div>
+            <label className="block text-sm font-medium mb-2">Filter by Date</label>
+            <input
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Filter by Direction</label>
+            <select
+              value={filterDirection}
+              onChange={(e) => setFilterDirection(e.target.value)}
+              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Directions</option>
+              <option value="departure">Departure</option>
+              <option value="arrival">Arrival</option>
+            </select>
+          </div>
+          <div className="md:col-span-2">
+            <button
+              onClick={() => {
+                setFilterDate('');
+                setFilterDirection('');
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+
+        <div className="border rounded-lg bg-white">
+          <div className="max-h-96 overflow-y-auto">
+            <table className="w-full table-auto">
+              <thead className="sticky top-0 bg-gray-100 border-b">
+                <tr>
+                  <th className="text-left p-3 font-medium">Flight</th>
+                  <th className="text-left p-3 font-medium">Route</th>
+                  <th className="text-left p-3 font-medium">Date</th>
+                  <th className="text-left p-3 font-medium">Times converted to LTN</th>
+                  <th className="text-left p-3 font-medium">Duration</th>
+                  <th className="text-left p-3 font-medium">Direction</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredFlights.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center p-8 text-gray-500">
+                      {flights.length === 0 ? 'No flights available' : 'No flights match the selected filters'}
                     </td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                ) : (
+                  filteredFlights.map((flight) => {
+                    const dep = new Date(flight.departure_time);
+                    const arr = new Date(flight.arrival_time);
+                    const dateStr = dep.toLocaleDateString();
+                    return (
+                      <tr key={flight.id} className="border-b hover:bg-gray-50">
+                        <td className="p-3 font-medium">{flight.flight_number}</td>
+                        <td className="p-3">{flight.origin} → {flight.destination}</td>
+                        <td className="p-3">{dateStr}</td>
+                        <td className="p-3 text-sm">
+                          <div>Dep: {dep.toLocaleTimeString()}</div>
+                          <div>Arr: {arr.toLocaleTimeString()}</div>
+                        </td>
+                        <td className="p-3">{flight.duration_text}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            flight.direction === 'departure' 
+                              ? 'bg-blue-100 text-blue-800' 
+                              : 'bg-purple-100 text-purple-800'
+                          }`}>
+                            {flight.direction}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

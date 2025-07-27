@@ -1,86 +1,6 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, computed_field, validator
 from datetime import datetime
 from typing import Optional, List
-
-class FlightAssignmentBase(BaseModel):
-    flight_number: str
-    crew_name: Optional[str] = None
-    duration_minutes: Optional[int] = None
-
-class FlightAssignmentCreate(FlightAssignmentBase):
-    flight_id: int
-    crew_id: int
-    departure_time: datetime
-    arrival_time: datetime
-
-class FlightAssignmentRead(FlightAssignmentBase):
-    id: int
-    flight_id: int
-    crew_id: int
-    departure_time: datetime
-    arrival_time: datetime
-    departure: str = Field(alias="departure_time")
-    arrival: str = Field(alias="arrival_time")
-    
-    @validator('departure', pre=True, always=True)
-    def format_departure(cls, v, values):
-        if 'departure_time' in values:
-            dt = values['departure_time']
-            if isinstance(dt, datetime):
-                return dt.strftime('%Y-%m-%d %H:%M')
-        return v
-    
-    @validator('arrival', pre=True, always=True) 
-    def format_arrival(cls, v, values):
-        if 'arrival_time' in values:
-            dt = values['arrival_time']
-            if isinstance(dt, datetime):
-                return dt.strftime('%Y-%m-%d %H:%M')
-        return v
-
-    class Config:
-        from_attributes = True
-        allow_population_by_field_name = True
-
-class CrewScheduleBase(BaseModel):
-    crew_name: str
-    flight_number: str
-    origin: Optional[str] = None
-    destination: Optional[str] = None
-    duration_text: Optional[str] = None
-
-class CrewScheduleCreate(CrewScheduleBase):
-    crew_id: int
-    flight_id: int
-    departure_time: datetime
-    arrival_time: datetime
-
-class CrewScheduleRead(CrewScheduleBase):
-    id: int
-    crew_id: int
-    flight_id: int
-    departure_time: datetime
-    arrival_time: datetime
-
-    class Config:
-        from_attributes = True
-
-class CrewMemberBase(BaseModel):
-    name: str
-    role: str
-    is_on_leave: Optional[bool] = False
-
-class CrewMemberCreate(CrewMemberBase):
-    pass
-
-class CrewMemberRead(CrewMemberBase):
-    id: int
-    assignments: List[FlightAssignmentRead] = []
-    schedules: List[CrewScheduleRead] = []
-
-    class Config:
-        from_attributes = True
-
 class FlightBase(BaseModel):
     flight_number: str
     origin: Optional[str] = None
@@ -101,46 +21,162 @@ class FlightRead(FlightBase):
     id: int
     departure_time: Optional[datetime] = None
     arrival_time: Optional[datetime] = None
+    
+    @computed_field
+    @property
+    def route_display(self) -> str:
+        if self.origin and self.destination:
+            return f"{self.origin} → {self.destination}"
+        return "Unknown Route"
+    
+    @computed_field
+    @property
+    def departure_display(self) -> Optional[str]:
+        if self.departure_time:
+            offset = f" {self.origin_gmt_offset}" if self.origin_gmt_offset else ""
+            return f"{self.departure_time.strftime('%Y-%m-%d %H:%M')}{offset}"
+        return None
+    
+    @computed_field
+    @property
+    def arrival_display(self) -> Optional[str]:
+        if self.arrival_time:
+            offset = f" {self.destination_gmt_offset}" if self.destination_gmt_offset else ""
+            return f"{self.arrival_time.strftime('%Y-%m-%d %H:%M')}{offset}"
+        return None
 
     class Config:
         from_attributes = True
+class CrewMemberBase(BaseModel):
+    name: str
+    role: str
+    is_on_leave: Optional[bool] = False
 
-class FlightAssignmentSimple(BaseModel):
+class CrewMemberCreate(CrewMemberBase):
+    pass
+
+class CrewMemberRead(CrewMemberBase):
     id: int
-    flight_id: int
-    crew_id: int
-    flight_number: str
-    crew_name: Optional[str] = None
-    departure: str
-    arrival: str
-    duration_minutes: Optional[int] = None
     
-    @classmethod
-    def from_orm_obj(cls, obj):
-        return cls(
-            id=obj.id,
-            flight_id=obj.flight_id,
-            crew_id=obj.crew_id,
-            flight_number=obj.flight_number,
-            crew_name=obj.crew_name,
-            departure=obj.departure_time.strftime('%Y-%m-%d %H:%M') if obj.departure_time else '',
-            arrival=obj.arrival_time.strftime('%Y-%m-%d %H:%M') if obj.arrival_time else '',
-            duration_minutes=obj.duration_minutes
-        )
-
+    class Config:
+        from_attributes = True
 class CrewMemberSimple(BaseModel):
     id: int
     name: str
     role: str
-    is_on_leave: bool = False
-    assignments: List[FlightAssignmentSimple] = []
+    is_on_leave: Optional[bool] = False
 
-    @classmethod
-    def from_orm_obj(cls, obj):
-        return cls(
-            id=obj.id,
-            name=obj.name,
-            role=obj.role,
-            is_on_leave=obj.is_on_leave,
-            assignments=[FlightAssignmentSimple.from_orm_obj(a) for a in obj.assignments]
-        )
+    class Config:
+        from_attributes = True
+
+class FlightSimple(BaseModel):
+    id: int
+    flight_number: str
+    origin: Optional[str] = None
+    destination: Optional[str] = None
+    direction: Optional[str] = None
+    departure_time: Optional[datetime] = None
+    arrival_time: Optional[datetime] = None
+    duration_text: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+class FlightAssignmentBase(BaseModel):
+    status: Optional[str] = "active"
+    notes: Optional[str] = None
+
+class FlightAssignmentCreate(FlightAssignmentBase):
+    flight_id: int
+    crew_id: int
+
+class FlightAssignmentRead(FlightAssignmentBase):
+    id: int
+    flight_id: int
+    crew_id: int
+    assigned_at: datetime
+    
+    flight: FlightSimple
+    crew_member: CrewMemberSimple
+
+    @computed_field
+    @property
+    def departure_display(self) -> str:
+        if self.flight.departure_time:
+            return self.flight.departure_time.strftime('%Y-%m-%d %H:%M')
+        return "TBD"
+    
+    @computed_field
+    @property
+    def arrival_display(self) -> str:
+        if self.flight.arrival_time:
+            return self.flight.arrival_time.strftime('%Y-%m-%d %H:%M')
+        return "TBD"
+    
+    @computed_field
+    @property
+    def duration_display(self) -> str:
+        return self.flight.duration_text or "Unknown"
+
+    class Config:
+        from_attributes = True
+class CrewMemberWithAssignments(CrewMemberBase):
+    id: int
+    assignments: List[FlightAssignmentRead] = []
+    
+    @computed_field
+    @property
+    def active_assignments_count(self) -> int:
+        return len([a for a in self.assignments if a.status == "active"])
+
+    class Config:
+        from_attributes = True
+class ScheduleItem(BaseModel):
+    id: int
+    crew_id: int
+    crew_name: str
+    flight_id: int
+    flight_number: str
+    departure_time: Optional[datetime]
+    arrival_time: Optional[datetime]
+    origin: Optional[str]
+    destination: Optional[str]
+    duration_text: Optional[str]
+    
+    @validator('crew_name', pre=True)
+    def validate_crew_name(cls, v):
+        if not v or str(v).isdigit():
+            raise ValueError('crew_name must be a non-empty string, not a number')
+        return str(v)
+    
+    @validator('flight_number', pre=True)
+    def validate_flight_number(cls, v):
+        if not v:
+            raise ValueError('flight_number is required')
+        v_str = str(v)
+        if len(v_str) > 10 and '-' in v_str and v_str.count('-') >= 2:
+            raise ValueError('flight_number appears to be corrupted (looks like a date)')
+        return v_str
+    
+    @computed_field
+    @property
+    def departure_display(self) -> str:
+        if self.departure_time:
+            return self.departure_time.strftime('%Y-%m-%d %H:%M')
+        return "TBD"
+    
+    @computed_field
+    @property
+    def arrival_display(self) -> str:
+        if self.arrival_time:
+            return self.arrival_time.strftime('%Y-%m-%d %H:%M')
+        return "TBD"
+    
+    @computed_field
+    @property
+    def route_display(self) -> str:
+        origin = self.origin or "Unknown"
+        destination = self.destination or "Unknown"
+        return f"{origin} → {destination}"
+    
+    class Config:
+        from_attributes = True

@@ -1,4 +1,6 @@
 import requests
+import re
+import os
 from datetime import datetime, timedelta, timezone
 try:
     from zoneinfo import ZoneInfo
@@ -7,10 +9,12 @@ except ImportError:
 from app import models
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-import re
 from datetime import datetime
+from dotenv import load_dotenv
 
-API_KEY = ""
+load_dotenv()
+
+API_KEY = os.getenv("API_KEY")
 BASE_URL = "http://api.aviationstack.com/v1/flights"
 
 def get_gmt_offset_from_timezone(tz_name: str, ref_time: datetime = None) -> str:

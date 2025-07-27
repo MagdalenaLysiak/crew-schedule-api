@@ -25,6 +25,7 @@ export interface Schedule {
   id: number;
   crew_id: number;
   crew_name: string;
+  flight_id: number;
   flight_number: string;
   departure_time: string;
   arrival_time: string;
@@ -35,9 +36,18 @@ export interface Schedule {
 
 export interface AvailabilityCheck {
   available: boolean;
+  crew_name: string;
+  flight_number: string;
   message: string;
-  buffer_info?: string;
+  reason?: string;
   conflict_details?: string;
+  buffer_info?: string;
+  flight_details?: {
+    departure: string;
+    arrival: string;
+    route: string;
+    duration: string;
+  };
 }
 
 export interface Message {

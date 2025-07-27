@@ -18,7 +18,6 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
     new Date().toISOString().split('T')[0]
   );
 
-  //filter schedules by date
   const filteredSchedules = useMemo(() => {
     return schedules.filter(schedule => {
       const scheduleDate = new Date(schedule.departure_time).toISOString().split('T')[0];
@@ -67,7 +66,7 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
               <tr className="border-b">
                 <th className="text-left p-3">Crew Member</th>
                 <th className="text-left p-3">Flight</th>
-                <th className="text-left p-3">Times</th>
+                <th className="text-left p-3">Times converted to UTC</th>
                 <th className="text-left p-3">Route</th>
                 <th className="text-left p-3">Duration</th>
                 <th className="text-left p-3">Actions</th>
