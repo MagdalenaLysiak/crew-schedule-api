@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from datetime import datetime, timezone
 
 from app import models, schemas
 from .database import get_db
 from .utils import store_luton_flights
-from .validations import validate_flight_assignment, MINIMUM_BUFFER_HOURS
+from .validations import validate_flight_assignment
 from typing import List
 import logging
 
@@ -14,6 +13,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 VALID_CREW_ROLES = {"pilot", "flight attendant"}
+
 
 @router.post("/crew", response_model=schemas.CrewMemberRead)
 def create_crew(crew: schemas.CrewMemberCreate, db: Session = Depends(get_db)):
@@ -26,6 +26,7 @@ def create_crew(crew: schemas.CrewMemberCreate, db: Session = Depends(get_db)):
     db.refresh(db_crew)
     return db_crew
 
+
 @router.get("/crew", response_model=List[schemas.CrewMemberRead])
 def get_all_crew_members(db: Session = Depends(get_db)):
     try:
@@ -33,6 +34,7 @@ def get_all_crew_members(db: Session = Depends(get_db)):
         return crew_members
     except Exception as e:
         raise HTTPException(status_code=500, detail="Error fetching crew members")
+
 
 @router.delete("/crew/{crew_id}")
 def delete_crew(crew_id: int, db: Session = Depends(get_db)):
@@ -43,6 +45,7 @@ def delete_crew(crew_id: int, db: Session = Depends(get_db)):
     db.delete(crew)
     db.commit()
     return {"message": f"Crew member {crew_id} and related assignments deleted."}
+
 
 @router.post("/assign-flight/{crew_id}/{flight_id}")
 def assign_flight(crew_id: int, flight_id: int, db: Session = Depends(get_db)):
@@ -73,7 +76,7 @@ def assign_flight(crew_id: int, flight_id: int, db: Session = Depends(get_db)):
         status="active"
     )
     db.add(new_assignment)
-    
+
     try:
         db.commit()
         db.refresh(new_assignment)
@@ -98,18 +101,20 @@ def assign_flight(crew_id: int, flight_id: int, db: Session = Depends(get_db)):
         }
     }
 
+
 @router.delete("/assignment/{assignment_id}")
 def delete_assignment(assignment_id: int, db: Session = Depends(get_db)):
     assignment = db.query(models.FlightAssignment).filter(
         models.FlightAssignment.id == assignment_id
     ).first()
-    
+
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
 
     db.delete(assignment)
     db.commit()
     return {"message": f"Assignment {assignment_id} deleted successfully."}
+
 
 @router.get("/schedules")
 def get_all_schedules(db: Session = Depends(get_db)):
@@ -121,7 +126,7 @@ def get_all_schedules(db: Session = Depends(get_db)):
         ).filter(
             models.FlightAssignment.status == "active"
         ).all()
-        
+
         schedule_items = []
         for assignment in assignments:
             flight = assignment.flight
@@ -140,16 +145,17 @@ def get_all_schedules(db: Session = Depends(get_db)):
             }
             schedule_items.append(schedule_item)
         return schedule_items
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching schedules: {str(e)}")
+
 
 @router.get("/crew/{crew_id}/availability-check/{flight_id}")
 def check_crew_availability(crew_id: int, flight_id: int, db: Session = Depends(get_db)):
     crew = db.query(models.CrewMember).filter(models.CrewMember.id == crew_id).first()
     if not crew:
         raise HTTPException(status_code=404, detail="Crew member not found")
-    
+
     flight = db.query(models.Flight).filter(models.Flight.id == flight_id).first()
     if not flight:
         raise HTTPException(status_code=404, detail="Flight not found")
@@ -162,7 +168,7 @@ def check_crew_availability(crew_id: int, flight_id: int, db: Session = Depends(
 
     try:
         validate_flight_assignment(db, crew_id, flight, departure_time, arrival_time)
-        
+
         return {
             "available": True,
             "crew_name": crew.name,
@@ -175,7 +181,7 @@ def check_crew_availability(crew_id: int, flight_id: int, db: Session = Depends(
                 "duration": flight.duration_text
             }
         }
-        
+
     except HTTPException as e:
         return {
             "available": False,
@@ -185,17 +191,19 @@ def check_crew_availability(crew_id: int, flight_id: int, db: Session = Depends(
             "message": f"Crew member {crew.name} is NOT available for flight {flight.flight_number}"
         }
 
+
 @router.get("/flights", response_model=List[schemas.FlightRead])
 def get_all_flights(db: Session = Depends(get_db)):
     flights = db.query(models.Flight).all()
     return flights
+
 
 @router.post("/load-flights")
 def load_flights(db: Session = Depends(get_db), flight_date: str = None):
     try:
         store_luton_flights(db, flight_date)
         total_flights = db.query(models.Flight).count()
-        
+
         return {
             "message": f"Flights loaded successfully. Total flights in database: {total_flights}",
             "date": flight_date or "today"
@@ -203,12 +211,14 @@ def load_flights(db: Session = Depends(get_db), flight_date: str = None):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load flights: {str(e)}")
 
+
 @router.get("/flights/{flight_id}", response_model=schemas.FlightRead)
 def get_flight_details(flight_id: int, db: Session = Depends(get_db)):
     flight = db.query(models.Flight).filter(models.Flight.id == flight_id).first()
     if not flight:
         raise HTTPException(status_code=404, detail="Flight not found")
     return flight
+
 
 @router.delete("/flight/{flight_id}")
 def delete_flight(flight_id: int, db: Session = Depends(get_db)):

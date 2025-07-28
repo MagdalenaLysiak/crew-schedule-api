@@ -1,11 +1,16 @@
 from fastapi import FastAPI
 from app import models, routes
-from app import database
+from app.database import engine
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-models.Base.metadata.create_all(bind=database.engine)
+
+@app.on_event("startup")   # only for local dev, not production
+def on_startup():
+    models.Base.metadata.create_all(bind=engine)
+
+
 app.include_router(routes.router)
 
 app.add_middleware(

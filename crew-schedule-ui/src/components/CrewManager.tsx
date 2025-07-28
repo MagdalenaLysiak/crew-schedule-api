@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Users, Eye, Trash2 } from 'lucide-react';
 import { CrewMember, NewCrewMember, Message } from '../types';
-import { ApiService } from '../services/apiService.ts';
+import { ApiService } from '../services/apiService';
 
 interface CrewManagerProps {
   crewMembers: CrewMember[];
@@ -95,7 +95,7 @@ const CrewManager: React.FC<CrewManagerProps> = ({
             className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required
           >
-            <option value="pilot">Pilot</option>
+            <option value="Pilot">Pilot</option>
             <option value="Flight attendant">Flight Attendant</option>
           </select>
           <button

@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, UniqueConstraint
 from sqlalchemy.orm import relationship
-from .database import Base
+from app.database import Base
+
 
 class Flight(Base):
     __tablename__ = "flights"
@@ -18,7 +19,8 @@ class Flight(Base):
     origin_gmt_offset = Column(String(10), nullable=True)
     destination_gmt_offset = Column(String(10), nullable=True)
     assignments = relationship("FlightAssignment", back_populates="flight", cascade="all, delete-orphan")
-    
+
+
 class CrewMember(Base):
     __tablename__ = "crew_members"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
@@ -26,6 +28,7 @@ class CrewMember(Base):
     role = Column(String(255), nullable=False)
     is_on_leave = Column(Boolean, default=False, nullable=False)
     assignments = relationship("FlightAssignment", back_populates="crew_member", cascade="all, delete-orphan")
+
 
 class FlightAssignment(Base):
     __tablename__ = "flight_assignments"

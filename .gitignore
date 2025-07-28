@@ -185,3 +185,5 @@ dist-ssr
 *.sw?
 
 .env
+
+coverage/

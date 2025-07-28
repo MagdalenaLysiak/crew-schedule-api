@@ -27,7 +27,8 @@ app/
 ├── schemas.py          # pydantic schemas for API
 ├── routes.py           # API endpoints
 ├── utils.py            # flight data utilities
-└── validations.py      # business logic validation
+├── validations.py      # business logic validation
+└── tests/
 ```
 
 ### Frontend (React + TypeScript)
@@ -40,8 +41,9 @@ src/
 │   └── MessageBanner.tsx      # user feedback notifications
 ├── services/
 │   └── apiService.ts          # API communication layer
-└── types.ts
-    └── index.ts               # type definitions
+├── types/
+│    └── index.ts               # type definitions
+└── tests/
 ```
 
 ## Database Schema
