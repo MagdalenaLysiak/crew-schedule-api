@@ -1,5 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def get_db():
@@ -10,7 +14,7 @@ def get_db():
         db.close()
 
 
-DB_URL = "mysql+pymysql://root:pass@localhost:3306/crew_db"
+DB_URL = os.getenv("DATABASE_URL")
 
 engine = create_engine(DB_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

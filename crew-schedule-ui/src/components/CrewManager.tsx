@@ -57,14 +57,21 @@ const CrewManager: React.FC<CrewManagerProps> = ({
 
   const viewCrewSchedule = async (crewId: number): Promise<void> => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const data = await ApiService.getCrewSchedule(crewId, today);
-      const scheduleText = `Schedule for ${data.crew_name} on ${today}:\n\n` +
-        `Total flights: ${data.schedule.total_flights}\n` +
-        `Duty time: ${data.schedule.total_duty_time}\n` +
-        `Within limits: ${data.schedule.within_limits ? 'Yes' : 'No'}\n\n` +
-        `Flights:\n${data.schedule.flights.map(f =>
-          `${f.flight_number}: ${f.departure} → ${f.arrival} (${f.duration})`
+      const schedules = await ApiService.getSchedules();
+      const crewSchedules = schedules.filter(s => s.crew_id === crewId);
+      const crewMember = crewMembers.find(c => c.id === crewId);
+      
+      if (crewSchedules.length === 0) {
+        onShowMessage('info', `No flights assigned to ${crewMember?.name || 'this crew member'}`);
+        return;
+      }
+      
+      const scheduleText = `Schedule for ${crewMember?.name || 'Crew Member'}:\n\n` +
+        `Total flights: ${crewSchedules.length}\n\n` +
+        `Flights:\n${crewSchedules.map(s =>
+          `${s.flight_number}: ${s.origin} → ${s.destination}\n` +
+          `Departure: ${new Date(s.departure_time).toLocaleString()}\n` +
+          `Arrival: ${new Date(s.arrival_time).toLocaleString()}\n`
         ).join('\n')}`;
       
       window.alert(scheduleText);
