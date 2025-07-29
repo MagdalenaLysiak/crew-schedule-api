@@ -1,6 +1,6 @@
 import { CrewMember, NewCrewMember, Flight, Schedule, AvailabilityCheck, CrewSchedule } from '../types';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export class ApiService {
   private static async handleResponse<T>(response: Response): Promise<T> {
@@ -36,10 +36,7 @@ export class ApiService {
     }
   }
 
-  static async getCrewSchedule(crewId: number, date: string): Promise<CrewSchedule> {
-    const response = await fetch(`${API_BASE}/crew/${crewId}/schedule/${date}`);
-    return this.handleResponse<CrewSchedule>(response);
-  }
+
 
   //flight management
   static async getFlights(): Promise<Flight[]> {

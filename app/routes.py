@@ -226,8 +226,7 @@ def delete_flight(flight_id: int, db: Session = Depends(get_db)):
     if not flight:
         raise HTTPException(status_code=404, detail="Flight not found")
 
-    db.query(models.CrewSchedule).filter(models.CrewSchedule.flight_number == flight.flight_number).delete()
-    db.query(models.FlightAssignment).filter(models.FlightAssignment.flight_number == flight.flight_number).delete()
+    db.query(models.FlightAssignment).filter(models.FlightAssignment.flight_id == flight.id).delete()
 
     db.delete(flight)
     db.commit()

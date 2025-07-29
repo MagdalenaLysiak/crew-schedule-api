@@ -68,33 +68,65 @@ src/
 ### Prerequisites
 - Python 3.8+
 - Node.js 16+
-- MySQL/PostgresSQL
+- MySQL database
 - AviationStack API key
 
 ### Backend Setup
 ```bash
+# IMPORTANT: Run these commands from the ROOT directory (crew-schedule-api/)
+
 # Create virtual environment
 python -m venv venv
-source venv/bin/activate  # or venv\Scripts\activate on Windows
+
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+# source venv/bin/activate
 
 # Install dependencies
-pip install fastapi uvicorn sqlalchemy psycopg2-binary python-dotenv requests
+pip install -r requirements.txt
 
 # Configure environment
-cp .env.example .env
-# Add your AviationStack API key to .env
+copy .env.example .env  # On Windows
+# cp .env.example .env   # On macOS/Linux
+# Edit .env file and add your AviationStack API key and database URL
 
-# Run server
-uvicorn app.main:app --reload --port 8000
+# Run if uvicorn command is not working
+pip install backports.zoneinfo
+
+# Run server (make sure virtual environment is activated)
+uvicorn main:app --reload --port 8000
+
+# Alternative if uvicorn command not found:
+# python -m uvicorn main:app --reload --port 8000
+```
+
+### Troubleshooting
+If you get "Could not import module 'main'" error:
+1. Make sure you're in the ROOT directory (crew-schedule-api/) not the frontend directory
+2. Make sure virtual environment is activated: `venv\Scripts\activate.bat` (Windows)
+3. Alternative without activating venv: `venv\Scripts\python.exe -m uvicorn main:app --reload --port 8000`
+4. Or use: `python -m uvicorn main:app --reload --port 8000` (if venv is activated)
+
+```bash
 ```
 
 ### Frontend Setup
 ```bash
-# Install dependancies
+# IMPORTANT: Run these commands from the FRONTEND directory (crew-schedule-ui/)
+
+# Navigate to frontend directory
+cd crew-schedule-ui
+
+# Install dependencies
 npm install
 
-# Start development server
-npm start
+# Configure environment (optional)
+# Copy and edit .env file if you need to change API URL
+
+# Start development server (runs on http://localhost:3000)
+npm run dev
 ```
 
 ## API Endpoints
@@ -107,7 +139,6 @@ npm start
 ### Flight Operations
 - `GET /flights` - list all flights
 - `POST /load-flights` - load flights from API / only flights from current day (free plan limitations)
-- `GET /flights/{flight_id}` - get flight details
 
 ### Scheduling
 - `POST /assign-flight/{crew_id}/{flight_id}` - assign crew to flight
@@ -158,5 +189,5 @@ npm start
 ## Future Enhancements
 
 - **Authentication** Secure login and access control for users
-- **Mobile varsion** Responsive design optimized for mobile devices
+- **Mobile version** Responsive design optimized for mobile devices
 - **Automatic Return Flight Suggestions** Automatically proposes suitable return flights based on outbound selection

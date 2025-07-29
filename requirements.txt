@@ -3,3 +3,5 @@ uvicorn
 sqlalchemy
 pymysql
 requests
+python-dotenv
+backports.zoneinfo
