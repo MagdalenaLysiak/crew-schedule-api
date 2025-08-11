@@ -3,11 +3,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from fastapi import HTTPException
 from app import models
+from app.config import BusinessRules, ApiConfig
+from app.logger_service import LoggerService
 from typing import Optional
 
-MINIMUM_BUFFER_HOURS = 3
-DUTY_TIME_LIMIT_HOURS = 14
-MAX_FLIGHTS_PER_DAY = 2
+business_rules = BusinessRules()
+api_config = ApiConfig()
+logger = LoggerService(__name__)
 
 
 class FlightConflict:
@@ -43,9 +45,9 @@ def validate_luton_flight_sequence(
     """
     target_date = departure_time.date()
 
-    print(f"New flight: {new_flight.flight_number} ({new_flight.direction})")
-    print(f"Route: {new_flight.origin} → {new_flight.destination}")
-    print(f"Date: {target_date}")
+    logger.info(f"New flight: {new_flight.flight_number} ({new_flight.direction})")
+    logger.debug(f"Route: {new_flight.origin} → {new_flight.destination}")
+    logger.debug(f"Date: {target_date}")
 
     existing_assignments = db.query(models.FlightAssignment).join(
         models.Flight
@@ -60,18 +62,18 @@ def validate_luton_flight_sequence(
 
     for assignment in existing_assignments:
         flight = assignment.flight
-        if flight.direction == "departure" and flight.origin == "LTN":
+        if flight.direction == "departure" and flight.origin == api_config.airport_code:
             luton_departures.append(assignment)
-            print(f"Found existing departure: {flight.flight_number} (LTN → {flight.destination})")
-        elif flight.direction == "arrival" and flight.destination == "LTN":
+            logger.debug(f"Found existing departure: {flight.flight_number} ({api_config.airport_code} → {flight.destination})")
+        elif flight.direction == "arrival" and flight.destination == api_config.airport_code:
             luton_arrivals.append(assignment)
-            print(f"Found existing arrival: {flight.flight_number} ({flight.origin} → LTN)")
+            logger.debug(f"Found existing arrival: {flight.flight_number} ({flight.origin} → {api_config.airport_code})")
 
-    is_luton_departure = (new_flight.direction == "departure" and new_flight.origin == "LTN")
-    is_luton_arrival = (new_flight.direction == "arrival" and new_flight.destination == "LTN")
+    is_luton_departure = (new_flight.direction == "departure" and new_flight.origin == api_config.airport_code)
+    is_luton_arrival = (new_flight.direction == "arrival" and new_flight.destination == api_config.airport_code)
 
-    print(f"New flight is Luton departure: {is_luton_departure}")
-    print(f"New flight is Luton arrival: {is_luton_arrival}")
+    logger.debug(f"New flight is Luton departure: {is_luton_departure}")
+    logger.debug(f"New flight is Luton arrival: {is_luton_arrival}")
 
     if is_luton_departure and len(luton_departures) >= 1:
         existing_assignment = luton_departures[0]
@@ -106,7 +108,7 @@ def validate_luton_flight_sequence(
                        f"Crew must return from the same location they departed to."
             )
 
-        print(f"Origin-destination match validated: {new_flight.origin} matches {departure_flight.destination}")
+        logger.debug(f"Origin-destination match validated: {new_flight.origin} matches {departure_flight.destination}")
 
     if is_luton_departure and len(luton_arrivals) > 0:
         existing_arrival = luton_arrivals[0]
@@ -121,7 +123,7 @@ def validate_luton_flight_sequence(
                        f"Crew must depart to the same location they will return from."
             )
 
-        print(f"Destination-origin match validated: {new_flight.destination} matches {arrival_flight.origin}")
+        logger.debug(f"Destination-origin match validated: {new_flight.destination} matches {arrival_flight.origin}")
 
     if is_luton_departure and len(luton_arrivals) > 0:
         existing_assignment = luton_arrivals[0]
@@ -152,14 +154,16 @@ def flight_assignment_validation(
     new_flight: models.Flight,
     departure_time: datetime,
     arrival_time: datetime,
-    buffer_hours: float = MINIMUM_BUFFER_HOURS
+    buffer_hours: float = None
 ) -> None:
 
+    if buffer_hours is None:
+        buffer_hours = business_rules.buffer_hours
     buffer_delta = timedelta(hours=buffer_hours)
     target_date = departure_time.date()
 
-    print(f"Flight: {new_flight.flight_number} ({new_flight.direction})")
-    print(f"Time: {departure_time.strftime('%H:%M')} → {arrival_time.strftime('%H:%M')}")
+    logger.info(f"Flight: {new_flight.flight_number} ({new_flight.direction})")
+    logger.debug(f"Time: {departure_time.strftime('%H:%M')} → {arrival_time.strftime('%H:%M')}")
 
     existing_assignment = db.query(models.FlightAssignment).filter(
         models.FlightAssignment.crew_id == crew_id,
@@ -169,7 +173,7 @@ def flight_assignment_validation(
 
     if existing_assignment:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail=f"Crew member is already assigned to flight {new_flight.flight_number}"
         )
 
@@ -190,12 +194,12 @@ def flight_assignment_validation(
     daily_assignments = [a for a in existing_assignments
                          if a.flight.departure_time.date() == target_date]
 
-    print(f"Found {len(daily_assignments)} flights on target date")
+    logger.debug(f"Found {len(daily_assignments)} flights on target date")
 
-    if len(daily_assignments) >= MAX_FLIGHTS_PER_DAY:
+    if len(daily_assignments) >= business_rules.max_flights_per_day:
         raise HTTPException(
             status_code=400,
-            detail=f"Crew member already has {MAX_FLIGHTS_PER_DAY} flights scheduled on {target_date}. "
+            detail=f"Crew member already has {business_rules.max_flights_per_day} flights scheduled on {target_date}. "
                    f"Maximum allowed: 1 departure + 1 arrival per day."
         )
 
@@ -204,7 +208,7 @@ def flight_assignment_validation(
     for assignment in existing_assignments:
         flight = assignment.flight
         if flight.arrival_time <= flight.departure_time:
-            print(f"WARNING: Invalid existing flight data for {flight.flight_number}!")
+            logger.warning(f"Invalid existing flight data for {flight.flight_number}!")
             continue
 
         conflict = check_flight_time_conflict(
@@ -212,7 +216,7 @@ def flight_assignment_validation(
         )
         if conflict:
             conflicts.append(conflict)
-            print(f"Time conflict detected: {conflict}")
+            logger.warning(f"Time conflict detected: {conflict}")
 
     if conflicts:
         conflict_details = "; ".join(str(c) for c in conflicts)
@@ -239,8 +243,8 @@ def check_flight_time_conflict(
     existing_dep = existing_flight.departure_time
     existing_arr = existing_flight.arrival_time
 
-    print(f"[CONFLICT_CHECK] Existing: {existing_dep.strftime('%m/%d %H:%M')} → {existing_arr.strftime('%m/%d %H:%M')}")
-    print(f"[CONFLICT_CHECK] New: {new_departure.strftime('%m/%d %H:%M')} → {new_arrival.strftime('%m/%d %H:%M')}")
+    logger.debug(f"[CONFLICT_CHECK] Existing: {existing_dep.strftime('%m/%d %H:%M')} → {existing_arr.strftime('%m/%d %H:%M')}")
+    logger.debug(f"[CONFLICT_CHECK] New: {new_departure.strftime('%m/%d %H:%M')} → {new_arrival.strftime('%m/%d %H:%M')}")
 
     if new_departure > existing_arr:
         gap = new_departure - existing_arr
@@ -291,15 +295,15 @@ def validate_crew_limits_per_flight(db: Session, flight: models.Flight, crew_rol
                      if a.crew_member.role.lower() == "flight attendant")
 
     role_lower = crew_role.lower()
-    if role_lower == "pilot" and pilots >= 2:
+    if role_lower == "pilot" and pilots >= business_rules.max_pilots_per_flight:
         raise HTTPException(
-            status_code=400, 
-            detail=f"Flight {flight.flight_number} already has 2 pilots assigned"
+            status_code=400,
+            detail=f"Flight {flight.flight_number} already has {business_rules.max_pilots_per_flight} pilots assigned"
         )
-    elif role_lower == "flight attendant" and attendants >= 4:
+    elif role_lower == "flight attendant" and attendants >= business_rules.max_attendants_per_flight:
         raise HTTPException(
-            status_code=400, 
-            detail=f"Flight {flight.flight_number} already has 4 flight attendants assigned"
+            status_code=400,
+            detail=f"Flight {flight.flight_number} already has {business_rules.max_attendants_per_flight} flight attendants assigned"
         )
 
 
@@ -342,7 +346,7 @@ def get_crew_schedule_summary(db: Session, crew_id: int, date: datetime.date) ->
         "duty_start": duty_start.strftime("%H:%M"),
         "duty_end": duty_end.strftime("%H:%M"),
         "total_duty_time": f"{duty_hours}h {duty_minutes}m",
-        "within_limits": duty_hours <= DUTY_TIME_LIMIT_HOURS
+        "within_limits": duty_hours <= business_rules.duty_time_limit_hours
     }
 
     return schedule_summary
@@ -356,5 +360,5 @@ def validate_flight_assignment(
     arrival_time: datetime
 ) -> None:
     flight_assignment_validation(
-        db, crew_id, flight, departure_time, arrival_time, MINIMUM_BUFFER_HOURS
+        db, crew_id, flight, departure_time, arrival_time
     )

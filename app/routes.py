@@ -6,55 +6,60 @@ from app import models, schemas
 from .database import get_db
 from .utils import store_luton_flights
 from .validations import validate_flight_assignment
+from .logger_service import LoggerService, get_logger_service
+from .config import BusinessRules
 from typing import List
-import logging
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
-
-VALID_CREW_ROLES = {"pilot", "flight attendant"}
+business_rules = BusinessRules()
 
 
 @router.post("/crew", response_model=schemas.CrewMemberRead)
-def create_crew(crew: schemas.CrewMemberCreate, db: Session = Depends(get_db)):
-    if crew.role.lower() not in VALID_CREW_ROLES:
+def create_crew(crew: schemas.CrewMemberCreate, db: Session = Depends(get_db), logger: LoggerService = Depends(get_logger_service)):
+    if crew.role.lower() not in business_rules.valid_crew_roles:
         raise HTTPException(status_code=400, detail="Invalid crew role. Must be 'pilot' or 'flight attendant'.")
 
     db_crew = models.CrewMember(**crew.dict())
     db.add(db_crew)
     db.commit()
     db.refresh(db_crew)
+    logger.info(f"Created crew member: {crew.name} ({crew.role})")
     return db_crew
 
 
 @router.get("/crew", response_model=List[schemas.CrewMemberRead])
-def get_all_crew_members(db: Session = Depends(get_db)):
+def get_all_crew_members(db: Session = Depends(get_db), logger: LoggerService = Depends(get_logger_service)):
     try:
         crew_members = db.query(models.CrewMember).all()
+        logger.info(f"Retrieved {len(crew_members)} crew members")
         return crew_members
     except Exception as e:
         raise HTTPException(status_code=500, detail="Error fetching crew members")
 
 
 @router.delete("/crew/{crew_id}")
-def delete_crew(crew_id: int, db: Session = Depends(get_db)):
+def delete_crew(crew_id: int, db: Session = Depends(get_db), logger: LoggerService = Depends(get_logger_service)):
     crew = db.query(models.CrewMember).filter(models.CrewMember.id == crew_id).first()
     if not crew:
+        logger.warning(f"Crew member {crew_id} not found for deletion")
         raise HTTPException(status_code=404, detail="Crew member not found")
 
     db.delete(crew)
     db.commit()
+    logger.info(f"Deleted crew member {crew_id} ({crew.name})")
     return {"message": f"Crew member {crew_id} and related assignments deleted."}
 
 
 @router.post("/assign-flight/{crew_id}/{flight_id}")
-def assign_flight(crew_id: int, flight_id: int, db: Session = Depends(get_db)):
+def assign_flight(crew_id: int, flight_id: int, db: Session = Depends(get_db), logger: LoggerService = Depends(get_logger_service)):
     crew = db.query(models.CrewMember).filter(models.CrewMember.id == crew_id).first()
     if not crew:
+        logger.warning(f"Crew member {crew_id} not found for assignment")
         raise HTTPException(status_code=404, detail="Crew member not found")
 
     flight = db.query(models.Flight).filter(models.Flight.id == flight_id).first()
     if not flight:
+        logger.warning(f"Flight {flight_id} not found for assignment")
         raise HTTPException(status_code=404, detail="Flight not found")
 
     departure_time = flight.departure_time
@@ -63,11 +68,7 @@ def assign_flight(crew_id: int, flight_id: int, db: Session = Depends(get_db)):
     if not departure_time or not arrival_time:
         raise HTTPException(status_code=400, detail="Flight missing departure or arrival time")
 
-    try:
-        validate_flight_assignment(db, crew_id, flight, departure_time, arrival_time)
-    except HTTPException as e:
-        logger.error(f"Assignment validation failed: {e.detail}")
-        raise e
+    validate_flight_assignment(db, crew_id, flight, departure_time, arrival_time)
 
     new_assignment = models.FlightAssignment(
         flight_id=flight.id,
@@ -80,9 +81,9 @@ def assign_flight(crew_id: int, flight_id: int, db: Session = Depends(get_db)):
     try:
         db.commit()
         db.refresh(new_assignment)
+        logger.info(f"Assigned crew {crew.name} to flight {flight.flight_number}")
     except Exception as e:
         db.rollback()
-        logger.error(f"Database error during assignment creation: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to create assignment: {str(e)}")
 
     return {
@@ -199,10 +200,11 @@ def get_all_flights(db: Session = Depends(get_db)):
 
 
 @router.post("/load-flights")
-def load_flights(db: Session = Depends(get_db), flight_date: str = None):
+def load_flights(db: Session = Depends(get_db), flight_date: str = None, logger: LoggerService = Depends(get_logger_service)):
     try:
         store_luton_flights(db, flight_date)
         total_flights = db.query(models.Flight).count()
+        logger.info(f"Loaded flights for {flight_date or 'today'}. Total flights: {total_flights}")
 
         return {
             "message": f"Flights loaded successfully. Total flights in database: {total_flights}",
