@@ -108,7 +108,7 @@ describe('ApiService', () => {
       
       const result = await ApiService.createCrewMember(newCrew);
       
-      expect(mockFetch).toHaveBeenCalledWith('http://localhost:8000/crew', {
+      expect(mockFetch).toHaveBeenCalledWith('http://localhost:8001/crew', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newCrew)
@@ -134,7 +134,7 @@ describe('ApiService', () => {
       const result = await ApiService.checkAvailability(1, 100);
       
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8000/crew/1/availability-check/100'
+        'http://localhost:8001/crew/1/availability-check/100'
       );
       expect(result.available).toBe(true);
     });

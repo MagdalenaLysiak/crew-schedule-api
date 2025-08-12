@@ -1,6 +1,6 @@
 import { CrewMember, NewCrewMember, Flight, Schedule, AvailabilityCheck, CrewSchedule } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE = process.env.VITE_API_BASE_URL || 'http://localhost:8001';
 
 export class ApiService {
   private static async handleResponse<T>(response: Response): Promise<T> {
