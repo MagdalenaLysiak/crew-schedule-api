@@ -35,14 +35,15 @@ services:
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
-    build: ./crew-schedule-ui
+    build: 
+      context: ./crew-schedule-ui
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
     container_name: crew_frontend
     ports:
       - "3000:80"
     depends_on:
       - backend
-    environment:
-      - VITE_API_BASE_URL=http://localhost:8000
 
 volumes:
   mysql_data:
