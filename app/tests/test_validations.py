@@ -6,10 +6,10 @@ from fastapi import HTTPException
 from app.validations import (
     validate_luton_flight_sequence,
     check_flight_time_conflict,
-    flight_assignment_validation,
-    MINIMUM_BUFFER_HOURS
+    flight_assignment_validation
 )
 from app import models
+from app.config import BusinessRules
 
 
 class TestLutonFlightSequence:
@@ -125,7 +125,8 @@ class TestLutonFlightSequence:
 
 class TestFlightTimeConflicts:
     def setup_method(self):
-        self.buffer_delta = timedelta(hours=MINIMUM_BUFFER_HOURS)
+        self.business_rules = BusinessRules()
+        self.buffer_delta = timedelta(hours=self.business_rules.buffer_hours)
         self.base_date = datetime(2024, 1, 15, tzinfo=timezone.utc)
 
     def create_mock_assignment_with_times(self, dep_hour, arr_hour):

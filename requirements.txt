@@ -6,3 +6,4 @@ cryptography
 requests
 python-dotenv
 backports.zoneinfo; python_version<"3.9"
+pytest
