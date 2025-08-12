@@ -5,7 +5,7 @@ jest.mock('../services/apiService', () => ({
   ApiService: {
     createCrewMember: jest.fn(),
     deleteCrewMember: jest.fn(),
-    getCrewSchedule: jest.fn(),
+    getSchedules: jest.fn(),
   },
 }));
 
@@ -98,55 +98,35 @@ describe('CrewManager', () => {
   });
 
   test('handles schedule fetch and displays data', async () => {
-    const mockScheduleData = {
-      crew_name: 'John Doe',
-      schedule: {
-        total_flights: 2,
-        total_duty_time: '8h 30m',
-        within_limits: true,
-        flights: [
-          { flight_number: 'LH123', departure: '08:00', arrival: '10:30', duration: '2h 30m' },
-          { flight_number: 'LH456', departure: '14:00', arrival: '20:00', duration: '6h' }
-        ]
+    const mockScheduleData = [
+      {
+        id: 1,
+        crew_member_name: 'John Doe',
+        flight_number: 'LH123',
+        departure_time: '2024-01-01T08:00:00',
+        arrival_time: '2024-01-01T10:30:00'
       }
-    };
+    ];
     
-    mockedApiService.getCrewSchedule.mockResolvedValueOnce(mockScheduleData);
-    window.alert = jest.fn();
+    mockedApiService.getSchedules.mockResolvedValueOnce(mockScheduleData);
     
-    const crewId = 1;
-    const today = new Date().toISOString().split('T')[0];
+    const data = await ApiService.getSchedules();
     
-    const data = await ApiService.getCrewSchedule(crewId, today);
-    const scheduleText = `Schedule for ${data.crew_name} on ${today}:\\n\\n` +
-      `Total flights: ${data.schedule.total_flights}\\n` +
-      `Duty time: ${data.schedule.total_duty_time}\\n` +
-      `Within limits: ${data.schedule.within_limits ? 'Yes' : 'No'}\\n\\n` +
-      `Flights:\\n${data.schedule.flights.map(f =>
-        `${f.flight_number}: ${f.departure} → ${f.arrival} (${f.duration})`
-      ).join('\\n')}`;
-    
-    window.alert(scheduleText);
-    
-    expect(mockedApiService.getCrewSchedule).toHaveBeenCalledWith(crewId, today);
-    expect(window.alert).toHaveBeenCalledWith(expect.stringContaining('Schedule for John Doe'));
-    expect(window.alert).toHaveBeenCalledWith(expect.stringContaining('Total flights: 2'));
+    expect(mockedApiService.getSchedules).toHaveBeenCalled();
+    expect(data).toEqual(mockScheduleData);
   });
 
   test('handles schedule fetch error', async () => {
-    const error = new Error('Failed to fetch schedule');
-    mockedApiService.getCrewSchedule.mockRejectedValueOnce(error);
+    const error = new Error('Failed to fetch schedules');
+    mockedApiService.getSchedules.mockRejectedValueOnce(error);
     const mockOnShowMessage = jest.fn();
-    
-    const crewId = 1;
-    const today = new Date().toISOString().split('T')[0];
 
     try {
-      await ApiService.getCrewSchedule(crewId, today);
+      await ApiService.getSchedules();
     } catch (err) {
-      mockOnShowMessage('error', (err as Error).message || 'Failed to fetch crew schedule');
+      mockOnShowMessage('error', (err as Error).message || 'Failed to fetch schedules');
     }
     
-    expect(mockOnShowMessage).toHaveBeenCalledWith('error', 'Failed to fetch schedule');
+    expect(mockOnShowMessage).toHaveBeenCalledWith('error', 'Failed to fetch schedules');
   });
 });

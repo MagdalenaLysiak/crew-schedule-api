@@ -2,6 +2,7 @@ fastapi
 uvicorn
 sqlalchemy
 pymysql
+cryptography
 requests
 python-dotenv
-backports.zoneinfo
+backports.zoneinfo; python_version<"3.9"

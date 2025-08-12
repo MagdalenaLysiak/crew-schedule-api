@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  database:
+    image: mysql:8.0
+    container_name: crew_db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: crew_db
+      MYSQL_USER: crew_user
+      MYSQL_PASSWORD: crew_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  backend:
+    build: .
+    container_name: crew_backend
+    environment:
+      - DATABASE_URL=mysql+pymysql://crew_user:crew_password@database:3306/crew_db
+      - API_KEY=${API_KEY}
+      - FRONTEND_URL=http://localhost:3000
+    ports:
+      - "8000:8000"
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build: ./crew-schedule-ui
+    container_name: crew_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+
+volumes:
+  mysql_data:

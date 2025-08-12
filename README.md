@@ -65,9 +65,36 @@ src/
 
 ## Setup and Installation
 
-### Prerequisites
-- Python 3.8+
-- Node.js 16+
+### Option 1: Docker Setup
+
+#### Prerequisites
+- Download Docker Desktop from docker.com/products/docker-desktop
+- AviationStack API key
+
+#### Quick Start
+```bash
+# 1. Clone and navigate to project
+cd crew-schedule-api
+
+# 2. Configure environment
+copy .env.example .env  # Windows
+cp .env.example .env   # macOS/Linux
+# Edit .env and add your AviationStack API key
+
+# 3. Start all services with Docker
+docker-compose up --build
+
+# 4. Access the application
+# - Frontend: http://localhost:3000
+# - Backend API: http://localhost:8000
+# - Database: localhost:3307
+```
+
+### Option 2: Manual Setup
+
+#### Prerequisites
+- Python 3.11+
+- Node.js 20+
 - MySQL Server
 - MySQL Workbench
 - AviationStack API key
@@ -121,13 +148,13 @@ cp .env.example .env   # On macOS/Linux
 # Example: DATABASE_URL=mysql+pymysql://root:yourpassword@localhost:3306/crew_db
 
 # Run server (make sure virtual environment is activated)
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8001
 
 # Run if uvicorn command is not working
 pip install backports.zoneinfo
 
 # Alternative if uvicorn command not found
-python -m uvicorn main:app --reload --port 8000
+python -m uvicorn main:app --reload --port 8001
 ```
 
 ### Troubleshooting
@@ -164,7 +191,7 @@ cd crew-schedule-ui
 # Install dependencies
 npm install
 
-# Start development server (runs on http://localhost:3000)
+# Start development server (runs on http://localhost:3001)
 npm run dev
 ```
 
@@ -231,8 +258,8 @@ npm run dev
 ```
 API_KEY=your_aviationstack_api_key
 DATABASE_URL=mysql+pymysql://username:password@localhost:3306/crew_db
-FRONTEND_URL=http://localhost:3000
-VITE_API_BASE_URL=http://localhost:8000
+FRONTEND_URL=http://localhost:3001
+VITE_API_BASE_URL=http://localhost:8001
 ```
 
 ## Future Enhancements
