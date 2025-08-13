@@ -1,4 +1,4 @@
-import { CrewMember, NewCrewMember, Flight, Schedule, AvailabilityCheck, CrewSchedule } from '../types';
+import { CrewMember, NewCrewMember, UpdateCrewMember, Flight, Schedule, AvailabilityCheck } from '../types';
 
 const API_BASE = process.env.VITE_API_BASE_URL || 'http://localhost:8001';
 
@@ -23,6 +23,15 @@ export class ApiService {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(crew)
+    });
+    return this.handleResponse<CrewMember>(response);
+  }
+
+  static async updateCrewMember(crewId: number, updates: UpdateCrewMember): Promise<CrewMember> {
+    const response = await fetch(`${API_BASE}/crew/${crewId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
     });
     return this.handleResponse<CrewMember>(response);
   }

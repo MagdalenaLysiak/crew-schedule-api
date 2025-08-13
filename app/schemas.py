@@ -63,6 +63,12 @@ class CrewMemberCreate(CrewMemberBase):
     pass
 
 
+class CrewMemberUpdate(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    is_on_leave: Optional[bool] = None
+
+
 class CrewMemberRead(CrewMemberBase):
     id: int
 

@@ -79,7 +79,7 @@ def validate_luton_flight_sequence(
         existing_assignment = luton_departures[0]
         existing_flight = existing_assignment.flight
         raise HTTPException(
-            status_code=400,
+            status_code=409,
             detail=f"Crew member already has a departure flight from Luton on {target_date}: "
                    f"{existing_flight.flight_number} at {existing_flight.departure_time.strftime('%H:%M')}. "
                    f"Only one departure per day is allowed."
@@ -89,7 +89,7 @@ def validate_luton_flight_sequence(
         existing_assignment = luton_arrivals[0]
         existing_flight = existing_assignment.flight
         raise HTTPException(
-            status_code=400,
+            status_code=409,
             detail=f"Crew member already has an arrival flight to Luton on {target_date}: "
                    f"{existing_flight.flight_number} at {existing_flight.arrival_time.strftime('%H:%M')}. "
                    f"Only one arrival per day is allowed."
@@ -101,7 +101,7 @@ def validate_luton_flight_sequence(
 
         if new_flight.origin != departure_flight.destination:
             raise HTTPException(
-                status_code=400,
+                status_code=409,
                 detail=f"Arrival flight {new_flight.flight_number} origin ({new_flight.origin}) "
                        f"must match the destination of departure flight {departure_flight.flight_number} "
                        f"({departure_flight.destination}) on the same day. "
@@ -116,7 +116,7 @@ def validate_luton_flight_sequence(
 
         if new_flight.destination != arrival_flight.origin:
             raise HTTPException(
-                status_code=400,
+                status_code=409,
                 detail=f"Departure flight {new_flight.flight_number} destination ({new_flight.destination}) "
                        f"must match the origin of arrival flight {arrival_flight.flight_number} "
                        f"({arrival_flight.origin}) on the same day. "
@@ -130,7 +130,7 @@ def validate_luton_flight_sequence(
         existing_flight = existing_assignment.flight
         if departure_time >= existing_flight.departure_time:
             raise HTTPException(
-                status_code=400,
+                status_code=409,
                 detail=f"Departure flight {new_flight.flight_number} at {departure_time.strftime('%H:%M')} "
                        f"must be scheduled before arrival flight {existing_flight.flight_number} "
                        f"at {existing_flight.departure_time.strftime('%H:%M')} on the same day."
@@ -141,7 +141,7 @@ def validate_luton_flight_sequence(
         existing_flight = existing_assignment.flight
         if departure_time <= existing_flight.arrival_time:
             raise HTTPException(
-                status_code=400,
+                status_code=409,
                 detail=f"Arrival flight {new_flight.flight_number} at {departure_time.strftime('%H:%M')} "
                        f"must be scheduled after departure flight {existing_flight.flight_number} "
                        f"lands at {existing_flight.arrival_time.strftime('%H:%M')} on the same day."
@@ -173,7 +173,7 @@ def flight_assignment_validation(
 
     if existing_assignment:
         raise HTTPException(
-            status_code=400,
+            status_code=409,
             detail=f"Crew member is already assigned to flight {new_flight.flight_number}"
         )
 
@@ -198,7 +198,7 @@ def flight_assignment_validation(
 
     if len(daily_assignments) >= business_rules.max_flights_per_day:
         raise HTTPException(
-            status_code=400,
+            status_code=409,
             detail=f"Crew member already has {business_rules.max_flights_per_day} flights scheduled on {target_date}. "
                    f"Maximum allowed: 1 departure + 1 arrival per day."
         )
@@ -221,13 +221,19 @@ def flight_assignment_validation(
     if conflicts:
         conflict_details = "; ".join(str(c) for c in conflicts)
         raise HTTPException(
-            status_code=400,
+            status_code=409,
             detail=f"Flight assignment conflicts detected: {conflict_details}"
         )
 
     crew = db.query(models.CrewMember).filter(models.CrewMember.id == crew_id).first()
     if not crew:
         raise HTTPException(status_code=404, detail="Crew member not found")
+    
+    if crew.is_on_leave:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Crew member {crew.name} is currently on leave and cannot be assigned to flights"
+        )
 
     validate_crew_limits_per_flight(db, new_flight, crew.role)
 
@@ -297,12 +303,12 @@ def validate_crew_limits_per_flight(db: Session, flight: models.Flight, crew_rol
     role_lower = crew_role.lower()
     if role_lower == "pilot" and pilots >= business_rules.max_pilots_per_flight:
         raise HTTPException(
-            status_code=400,
+            status_code=409,
             detail=f"Flight {flight.flight_number} already has {business_rules.max_pilots_per_flight} pilots assigned"
         )
     elif role_lower == "flight attendant" and attendants >= business_rules.max_attendants_per_flight:
         raise HTTPException(
-            status_code=400,
+            status_code=409,
             detail=f"Flight {flight.flight_number} already has {business_rules.max_attendants_per_flight} flight attendants assigned"
         )
 

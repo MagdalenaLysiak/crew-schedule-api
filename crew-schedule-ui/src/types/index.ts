@@ -10,6 +10,12 @@ export interface NewCrewMember {
   role: 'Pilot' | 'Flight attendant';
 }
 
+export interface UpdateCrewMember {
+  name?: string;
+  role?: 'Pilot' | 'Flight attendant';
+  is_on_leave?: boolean;
+}
+
 export interface Flight {
   id: number;
   flight_number: string;

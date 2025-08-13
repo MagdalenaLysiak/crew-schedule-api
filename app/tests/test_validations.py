@@ -73,7 +73,7 @@ class TestLutonFlightSequence:
                 new_flight.departure_time, new_flight.arrival_time
             )
 
-        assert exc_info.value.status_code == 400
+        assert exc_info.value.status_code == 409
         assert "already has a departure flight" in exc_info.value.detail
 
     def test_return_flight_origin_destination_match(self):
@@ -98,7 +98,7 @@ class TestLutonFlightSequence:
                 new_arrival.departure_time, new_arrival.arrival_time
             )
 
-        assert exc_info.value.status_code == 400
+        assert exc_info.value.status_code == 409
         assert "must match the destination" in exc_info.value.detail
 
     def test_valid_departure_arrival_sequence(self):
@@ -223,7 +223,7 @@ class TestFlightAssignmentValidation:
                 self.mock_flight.departure_time, self.mock_flight.arrival_time
             )
 
-        assert exc_info.value.status_code == 400
+        assert exc_info.value.status_code == 409
         assert "already assigned to flight" in exc_info.value.detail
 
     def test_daily_flight_limit_exceeded(self):
@@ -256,5 +256,5 @@ class TestFlightAssignmentValidation:
                     self.mock_flight.departure_time, self.mock_flight.arrival_time
                 )
 
-            assert exc_info.value.status_code == 400
+            assert exc_info.value.status_code == 409
             assert "already has 2 flights scheduled" in exc_info.value.detail

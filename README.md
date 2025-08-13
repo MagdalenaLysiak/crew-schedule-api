@@ -5,7 +5,7 @@ Web application for managing flight crew assignments and schedules at Luton Airp
 ## Features
 
 ### Core Functionality
-- **Crew management**: Add, view, and delete crew members (Pilots & Flight Attendants)
+- **Crew management**: Add, view, edit and delete crew members (Pilots & Flight Attendants)
 - **Flight data integration**: Load real-time flight data from AviationStack API
 - **Scheduling**: Assign crew to flights with automatic conflict detection
 - **Schedule view**: View and manage crew schedules by date
@@ -56,7 +56,7 @@ src/
 - Includes origin/destination GMT offsets
 
 #### `crew_members`
-- Staff informatoin (pilots and flight attendants)
+- Staff information (pilots and flight attendants)
 - Role-based permissions and availability status
 
 #### `flight_assignments`
@@ -200,6 +200,7 @@ npm run dev
 ### Crew Management
 - `GET /crew` - list all crew members
 - `POST /crew` - create new crew member
+- `PATCH /crew/{crew_id}` - update crew member
 - `DELETE /crew/{crew_id}` - delete crew member
 
 ### Flight Operations
@@ -219,18 +220,24 @@ npm run dev
 - Enter crew member name and select role (Pilot/Flight Attendant)
 - Click "Add Crew Member"
 
-### 2. Load Flight Data
+### 2. Edit Crew Members
+- In "Crew Management" tab
+- Click on 'edit' icon of chosen crew member
+- Change crew member's name, role and/or availability status
+- You can remove a crew member by clicking on a 'trash' icon or see crew member's schedule by clicking on 'eye' icon
+
+### 3. Load Flight Data
 - Go to "Flight Assignments" tab
 - Select a date (optional, defaults to today)
 - Click "Load Flights for Date" to fetch from AviationStack API
 
-### 3. Assign Flights
+### 4. Assign Flights
 - Select a crew member from the dropdown
 - Choose a flight from available flights
 - Click "Check Availability' to validate assignment
 - If available, click "Assign Flight"
 
-### 4. View Schedules
+### 5. View Schedules
 - Switch to "Schedule Overview" tab
 - Use date picker to filter schedules
 - View all assignments for selected date

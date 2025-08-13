@@ -16,9 +16,6 @@ business_rules = BusinessRules()
 
 @router.post("/crew", response_model=schemas.CrewMemberRead)
 def create_crew(crew: schemas.CrewMemberCreate, db: Session = Depends(get_db), logger: LoggerService = Depends(get_logger_service)):
-    if crew.role.lower() not in business_rules.valid_crew_roles:
-        raise HTTPException(status_code=400, detail="Invalid crew role. Must be 'pilot' or 'flight attendant'.")
-
     db_crew = models.CrewMember(**crew.dict())
     db.add(db_crew)
     db.commit()
@@ -34,7 +31,36 @@ def get_all_crew_members(db: Session = Depends(get_db), logger: LoggerService = 
         logger.info(f"Retrieved {len(crew_members)} crew members")
         return crew_members
     except Exception as e:
+        logger.error(f"Error fetching crew members: {str(e)}")
         raise HTTPException(status_code=500, detail="Error fetching crew members")
+
+
+@router.patch("/crew/{crew_id}", response_model=schemas.CrewMemberRead)
+def update_crew(crew_id: int, crew_update: schemas.CrewMemberUpdate, db: Session = Depends(get_db), logger: LoggerService = Depends(get_logger_service)):
+    crew = db.query(models.CrewMember).filter(models.CrewMember.id == crew_id).first()
+    if not crew:
+        raise HTTPException(status_code=404, detail="Crew member not found")
+
+    if crew_update.role and crew_update.role.lower() != crew.role.lower():
+        active_assignments = db.query(models.FlightAssignment).filter(
+            models.FlightAssignment.crew_id == crew_id,
+            models.FlightAssignment.status == "active"
+        ).count()
+
+        if active_assignments > 0:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Cannot change role while crew member has {active_assignments} active flight assignments. Remove assignments first."
+            )
+
+    update_data = crew_update.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(crew, field, value)
+
+    db.commit()
+    db.refresh(crew)
+    logger.info(f"Updated crew member {crew_id}: {update_data}")
+    return crew
 
 
 @router.delete("/crew/{crew_id}")
@@ -50,7 +76,7 @@ def delete_crew(crew_id: int, db: Session = Depends(get_db), logger: LoggerServi
     return {"message": f"Crew member {crew_id} and related assignments deleted."}
 
 
-@router.post("/assign-flight/{crew_id}/{flight_id}")
+@router.post("/assign-flight/{crew_id}/{flight_id}", status_code=201)
 def assign_flight(crew_id: int, flight_id: int, db: Session = Depends(get_db), logger: LoggerService = Depends(get_logger_service)):
     crew = db.query(models.CrewMember).filter(models.CrewMember.id == crew_id).first()
     if not crew:
@@ -118,7 +144,7 @@ def delete_assignment(assignment_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/schedules")
-def get_all_schedules(db: Session = Depends(get_db)):
+def get_all_schedules(db: Session = Depends(get_db), logger: LoggerService = Depends(get_logger_service)):
     try:
         assignments = db.query(models.FlightAssignment).join(
             models.Flight
@@ -148,7 +174,8 @@ def get_all_schedules(db: Session = Depends(get_db)):
         return schedule_items
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching schedules: {str(e)}")
+        logger.error(f"Error fetching schedules: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching schedules")
 
 
 @router.get("/crew/{crew_id}/availability-check/{flight_id}")

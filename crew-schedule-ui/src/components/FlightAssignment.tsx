@@ -157,7 +157,7 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
                   return (
                     <div
                       key={flight.id}
-                      onClick={() => selectFlight(flight)}
+                      onMouseDown={() => selectFlight(flight)}
                       className={`p-3 border-b last:border-b-0 ${styles.flightSuggestion}`}
                     >
                       <div className="font-medium">{flight.flight_number}</div>

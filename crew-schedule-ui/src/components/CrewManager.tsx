@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Plus, Users, Eye, Trash2 } from 'lucide-react';
-import { CrewMember, NewCrewMember, Message } from '../types';
+import { Plus, Users, Eye, Trash2, Edit } from 'lucide-react';
+import { CrewMember, NewCrewMember, UpdateCrewMember, Message } from '../types';
 import { ApiService } from '../services/apiService';
 
 interface CrewManagerProps {
@@ -23,6 +23,8 @@ const CrewManager: React.FC<CrewManagerProps> = ({
     role: 'Pilot',
   });
   const [isCreating, setIsCreating] = useState(false);
+  const [editingCrew, setEditingCrew] = useState<CrewMember | null>(null);
+  const [editForm, setEditForm] = useState<UpdateCrewMember>({});
 
   const createCrew = async (): Promise<void> => {
     if (!newCrew.name.trim()) {
@@ -40,6 +42,30 @@ const CrewManager: React.FC<CrewManagerProps> = ({
       onShowMessage('error', (error as Error).message || 'Failed to add crew member');
     }
     setIsCreating(false);
+  };
+
+  const startEdit = (crew: CrewMember) => {
+    setEditingCrew(crew);
+    setEditForm({ name: crew.name, role: crew.role, is_on_leave: crew.is_on_leave });
+  };
+
+  const cancelEdit = () => {
+    setEditingCrew(null);
+    setEditForm({});
+  };
+
+  const saveEdit = async () => {
+    if (!editingCrew) return;
+    
+    try {
+      await ApiService.updateCrewMember(editingCrew.id, editForm);
+      onShowMessage('success', 'Crew member updated successfully!');
+      setEditingCrew(null);
+      setEditForm({});
+      onRefreshCrew();
+    } catch (error) {
+      onShowMessage('error', (error as Error).message || 'Failed to update crew member');
+    }
   };
 
   const deleteCrew = async (crewId: number): Promise<void> => {
@@ -136,37 +162,96 @@ const CrewManager: React.FC<CrewManagerProps> = ({
             <tbody>
               {crewMembers.map((crew) => (
                 <tr key={crew.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3 font-medium">{crew.name}</td>
-                  <td className="p-3">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      crew.role === 'Pilot' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                    }`}>
-                      {crew.role}
-                    </span>
+                  <td className="p-3 font-medium">
+                    {editingCrew?.id === crew.id ? (
+                      <input
+                        type="text"
+                        value={editForm.name || ''}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        className="p-1 border rounded w-full"
+                      />
+                    ) : (
+                      crew.name
+                    )}
                   </td>
                   <td className="p-3">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      crew.is_on_leave ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                    }`}>
-                      {crew.is_on_leave ? 'On Leave' : 'Available'}
-                    </span>
+                    {editingCrew?.id === crew.id ? (
+                      <select
+                        value={editForm.role || crew.role}
+                        onChange={(e) => setEditForm({ ...editForm, role: e.target.value as 'Pilot' | 'Flight attendant' })}
+                        className="p-1 border rounded"
+                      >
+                        <option value="Pilot">Pilot</option>
+                        <option value="Flight attendant">Flight Attendant</option>
+                      </select>
+                    ) : (
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        crew.role === 'Pilot' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                      }`}>
+                        {crew.role}
+                      </span>
+                    )}
+                  </td>
+                  <td className="p-3">
+                    {editingCrew?.id === crew.id ? (
+                      <select
+                        value={editForm.is_on_leave !== undefined ? editForm.is_on_leave.toString() : crew.is_on_leave.toString()}
+                        onChange={(e) => setEditForm({ ...editForm, is_on_leave: e.target.value === 'true' })}
+                        className="p-1 border rounded"
+                      >
+                        <option value="false">Available</option>
+                        <option value="true">On Leave</option>
+                      </select>
+                    ) : (
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        crew.is_on_leave ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                      }`}>
+                        {crew.is_on_leave ? 'On Leave' : 'Available'}
+                      </span>
+                    )}
                   </td>
                   <td className="p-3">
                     <div className="flex space-x-2">
-                      <button
-                        onClick={() => viewCrewSchedule(crew.id)}
-                        className="text-blue-600 hover:text-blue-800"
-                        title="View Today's Schedule"
-                      >
-                        <Eye size={16} />
-                      </button>
-                      <button
-                        onClick={() => deleteCrew(crew.id)}
-                        className="text-red-600 hover:text-red-800"
-                        title="Delete"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {editingCrew?.id === crew.id ? (
+                        <>
+                          <button
+                            onClick={saveEdit}
+                            className="text-green-600 hover:text-green-800 px-2 py-1 text-xs"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="text-gray-600 hover:text-gray-800 px-2 py-1 text-xs"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => viewCrewSchedule(crew.id)}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="View Schedule"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button
+                            onClick={() => startEdit(crew)}
+                            className="text-yellow-600 hover:text-yellow-800"
+                            title="Edit"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            onClick={() => deleteCrew(crew.id)}
+                            className="text-red-600 hover:text-red-800"
+                            title="Delete"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
