@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plane, BookOpen } from 'lucide-react';
+import { Users, Plane, BookOpen, Moon, Sun } from 'lucide-react';
 import { CrewMember, Flight, Schedule, Message } from '../types';
 import { ApiService } from '../services/apiService';
 import CrewManager from './CrewManager';
@@ -23,6 +23,7 @@ const CrewManagementApp: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<Message>({ type: '', text: '' });
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const tabs: TabConfig[] = [
     { id: 'crew', label: 'Crew Management', icon: Users },
@@ -118,21 +119,30 @@ const CrewManagementApp: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="bg-white shadow-sm">
+    <div className={`min-h-screen ${isDarkMode ? 'dark bg-gray-900' : 'bg-gray-100'}`}>
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="app-container">
           <div className="app-header">
             <div className="header-brand">
               <Plane className="brand-icon" />
               <div>
-                <h1 className="brand-title">Flight Crew Management</h1>
-                <div className="text-sm text-gray-500 sm:hidden">
+                <h1 className="brand-title dark:text-white">Flight Crew Management</h1>
+                <div className="text-slogan">
                   Your easy scheduling app!
                 </div>
               </div>
             </div>
-            <div className="brand-tagline">
-              Your easy scheduling app!
+            <div className="flex items-center gap-4">
+              <div className="brand-tagline dark:text-gray-400">
+                Your easy scheduling app!
+              </div>
+              <button
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="btn-icon-hover"
+                title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                {isDarkMode ? <Sun size={20} className="text-yellow-500" /> : <Moon size={20} className="text-blue-800" />}
+              </button>
             </div>
           </div>
 
@@ -143,8 +153,8 @@ const CrewManagementApp: React.FC = () => {
                 onClick={() => setActiveTab(id)}
                 className={`nav-tab ${
                   activeTab === id
-                    ? 'text-blue-600'
-                    : 'text-gray-500'
+                    ? 'text-blue'
+                    : 'text-gray-500 dark:text-gray-400'
                 }`}
               >
                 <Icon className="sm:mr-2" size={16} />

@@ -34,6 +34,7 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
   const [filterDate, setFilterDate] = useState<Date | null>(null);
   const [filterDirection, setFilterDirection] = useState<string>('');
   const [showDirectionDropdown, setShowDirectionDropdown] = useState(false);
+  const [isRemovingFlights, setIsRemovingFlights] = useState(false);
 
   const checkAvailability = async (): Promise<void> => {
     if (!selectedCrew || !selectedFlight) return;
@@ -83,6 +84,24 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
     setIsLoadingFlights(false);
   };
 
+  const removeFlights = async (): Promise<void> => {
+    if (!window.confirm('Are you sure you want to remove all flights? This will also remove all flight assignments.')) return;
+
+    setIsRemovingFlights(true);
+    try {
+      const data = await ApiService.removeAllFlights();
+      onShowMessage('success', data.message);
+      onRefreshFlights();
+      onRefreshSchedules();
+      setSelectedFlight('');
+      setFlightSearch('');
+      setAvailabilityCheck(null);
+    } catch (error) {
+      onShowMessage('error', (error as Error).message || 'Failed to remove flights');
+    }
+    setIsRemovingFlights(false);
+  };
+
   const filteredFlights = flights.filter((flight) => {
     const flightDate = new Date(flight.departure_time);
     const dateMatch = !filterDate || flightDate.toDateString() === filterDate.toDateString();
@@ -104,15 +123,15 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="bg-white p-4 rounded-lg shadow-md">
+      <div className="card">
         <h3 className="heading-mb">
           <Plane className="mr-2" size={20} />
           Flight Assignment
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="form-grid">
           <div className="relative">
-            <label className="block text-sm font-medium mb-2">Select Crew Member</label>
+            <label className="label">Select Crew Member</label>
             <input
               type="text"
               value={selectedCrew ? crewMembers.find(c => c.id.toString() === selectedCrew)?.name + ` (${crewMembers.find(c => c.id.toString() === selectedCrew)?.role})` || '' : ''}
@@ -153,7 +172,7 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
           </div>
 
           <div className="relative">
-            <label className="block text-sm font-medium mb-2">Search Flight</label>
+            <label className="label">Search Flight</label>
             <input
               type="text"
               value={flightSearch}
@@ -217,6 +236,14 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
           >
             {isLoadingFlights ? 'Loading...' : 'Load Today\'s Flights'}
           </button>
+
+          <button
+            onClick={removeFlights}
+            disabled={loading || isRemovingFlights || flights.length === 0}
+            className="btn-red"
+          >
+            {isRemovingFlights ? 'Removing...' : 'Remove All Flights'}
+          </button>
         </div>
 
         {availabilityCheck && (
@@ -260,25 +287,33 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
         )}
       </div>
 
-      <div className="bg-white p-4 rounded-lg shadow-md">
+      <div className="card">
         <h3 className="section-title">Available Flights ({filteredFlights.length} of {flights.length})</h3>
         <div className="filter-container">
           <div>
-            <label className="block text-sm font-medium mb-2">Filter by Date</label>
-            <div className="w-full">
+            <label className="label">Filter by Date</label>
+            <div className="w-full relative">
               <DatePicker
                 selected={filterDate}
                 onChange={(date) => setFilterDate(date)}
                 placeholderText="Select date..."
                 className="input-small"
                 dateFormat="MMM d, yyyy"
-                isClearable
                 wrapperClassName="w-full"
               />
+              {filterDate && (
+                <button
+                  onClick={() => setFilterDate(null)}
+                  className="btn-clear"
+                  type="button"
+                >
+                  ×
+                </button>
+              )}
             </div>
           </div>
           <div className="relative">
-            <label className="block text-sm font-medium mb-2">Filter by Direction</label>
+            <label className="label">Filter by Direction</label>
             <input
               type="text"
               value={filterDirection ? (filterDirection === 'departure' ? 'Departure' : 'Arrival') : ''}
@@ -341,33 +376,33 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
           </div>
         </div>
 
-        <div className="border rounded-lg bg-white">
+        <div className="table-container">
+          <table className="w-full table-fixed">
+            <thead>
+              <tr className="table-header-row">
+                <th className="table-header">Flight</th>
+                <th className="table-header-hidden">Route</th>
+                <th className="table-header-hidden">Date</th>
+                <th className="table-header-hidden">Times</th>
+                <th className="table-header-hidden">Duration</th>
+                <th className="table-header-hidden">Direction</th>
+              </tr>
+            </thead>
+          </table>
           <div className="flight-scrollable-container">
-            <table className="w-full table-auto">
-              <thead className="sticky top-0 border-b bg-gray-50">
-                <tr>
-                  <th className="table-header">Flight</th>
-                  <th className="table-header-hidden">Route</th>
-                  <th className="table-header-hidden">Date</th>
-                  <th className="table-header-hidden">Times</th>
-                  <th className="table-header-hidden">Duration</th>
-                  <th className="table-header-hidden">Direction</th>
-                </tr>
-              </thead>
+            <table className="w-full table-fixed">
               <tbody>
                 {filteredFlights.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center p-8 text-gray-500">
+                  <div className="text-empty">
                       {flights.length === 0 ? 'No flights available' : 'No flights match the selected filters'}
-                    </td>
-                  </tr>
+                  </div>
                 ) : (
                   filteredFlights.map((flight) => {
                     const dep = new Date(flight.departure_time);
                     const arr = new Date(flight.arrival_time);
                     const dateStr = dep.toLocaleDateString();
                     return (
-                      <tr key={flight.id} className="border-b hover:bg-gray-50">
+                      <tr key={flight.id} className="table-row">
                         <td className="table-cell">
                           <div className="font-medium">{flight.flight_number}</div>
                           <div className="mobile-info">

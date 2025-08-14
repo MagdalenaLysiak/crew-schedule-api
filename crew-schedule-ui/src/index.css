@@ -24,36 +24,135 @@
   
   table {
     @apply w-full border-collapse;
+    table-layout: fixed;
   }
   
   th {
-    @apply text-left font-semibold text-gray-700 p-3;
+    @apply text-center font-semibold text-gray-700 dark:text-gray-300 p-3;
   }
   
   td {
-    @apply p-3 border-b border-gray-200;
+    @apply p-3 border-b border-gray-200 dark:border-gray-600 dark:text-gray-300 text-center;
   }
   
   tr:hover {
-    @apply bg-gray-50;
+    @apply bg-gray-50 dark:bg-gray-600;
   }
 }
 
 @layer components {
+    /* common */
+  .text-slogan {
+    @apply text-sm text-gray-500 dark:text-gray-400 sm:hidden;
+  }
+  
+  .btn-icon-hover {
+    @apply p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors;
+  }
+  
+  .card {
+    @apply bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md;
+  }
+  
+  .label {
+    @apply block text-sm font-medium mb-2 dark:text-gray-300;
+  }
+  
+  .table-container {
+    @apply border rounded-lg bg-white dark:bg-gray-700 dark:border-gray-600 overflow-hidden;
+  }
+  
+  .table-header-row {
+    @apply border-b dark:border-gray-600 bg-gray-50 dark:bg-gray-600;
+  }
+  
+  .table-row {
+    @apply border-b hover:bg-gray-50 dark:hover:bg-gray-600;
+  }
+  
+  .text-blue {
+    @apply text-blue-600 dark:text-blue-400;
+  }
+  
+  .text-empty {
+    @apply text-center py-8 text-gray-500 dark:text-gray-400;
+  }
+  
+  .btn-clear {
+    @apply absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-600 hover:text-blue-700 dark:text-white dark:hover:text-gray-200 text-xl font-bold;
+  }
+  
+  .text-delete {
+    @apply text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300;
+  }
+  
+  .form-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-4 mb-4;
+  }
+  
+  .icon-sm {
+    @apply sm:w-4 sm:h-4 dark:text-gray-300;
+  }
+  
+  .icon-mr {
+    @apply mr-2 dark:text-gray-300;
+  }
+  
+  .icon-inline {
+    @apply inline mr-1 sm:w-3 sm:h-3;
+  }
+  
+  .text-info {
+    @apply mb-4 text-sm text-gray-600 dark:text-gray-400;
+  }
+  
+  .text-footer {
+    @apply mt-4 text-sm text-gray-500;
+  }
+  
+  .flex-items {
+    @apply flex items-center space-x-2;
+  }
+  
+  .badge {
+    @apply px-2 py-1 rounded-full text-xs;
+  }
+  
+  .app-header {
+    @apply flex flex-row justify-between items-center py-4 gap-2;
+  }
+  
+  .header-brand {
+    @apply flex items-center justify-center sm:justify-start text-center sm:text-left flex-1;
+  }
+  
+  .brand-icon {
+    @apply h-6 w-6 sm:h-8 sm:w-8 text-yellow-500 dark:text-yellow-400 mr-2 sm:mr-3 flex-shrink-0;
+  }
+  
+  .brand-title {
+    @apply text-xl sm:text-2xl font-bold text-gray-900;
+  }
+  
+  .brand-tagline {
+    @apply text-sm text-gray-500 hidden sm:block;
+  }
+  
   .app-container {
     @apply max-w-[1000px] mx-auto px-2 sm:px-4;
   }
 
   .scrollable-container {
-    @apply h-[350px] sm:h-[385px] overflow-y-auto rounded-lg;
+    @apply h-[350px] sm:h-[385px] overflow-y-auto;
   }
   
   .flight-scrollable-container {
-    @apply h-[400px] sm:h-[615px] overflow-y-auto rounded-lg pb-4;
+    @apply h-[400px] sm:h-[615px] overflow-y-auto pb-4;
   }
+
   /* buttons */
   .btn-secondary-sm {
-    @apply bg-blue-600 text-white px-4 h-10 rounded-lg hover:bg-gray-700 text-sm;
+    @apply bg-blue-600 text-white px-4 h-10 rounded-lg hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-sm;
   }
 
   .btn-blue {
@@ -61,7 +160,7 @@
   }
 
   .btn-check {
-    @apply bg-blue-600 text-white px-4 h-10 rounded-lg hover:bg-yellow-700 disabled:opacity-50 flex items-center text-sm;
+    @apply bg-blue-600 text-white px-4 h-10 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center text-sm;
   }
   
   .btn-load {
@@ -70,6 +169,10 @@
   
   .btn-assign {
     @apply bg-blue-600 text-white px-4 h-10 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center text-sm;
+  }
+  
+  .btn-red {
+    @apply bg-red-600 text-white px-4 h-10 rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm;
   }
   
   .btn-text-green {
@@ -82,58 +185,80 @@
 
   /* inputs */
   .input-field {
-    @apply w-full h-10 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500;
+    @apply w-full h-10 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white;
   }
   
   .input-small {
-    @apply w-full h-10 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500;
+    @apply w-full h-10 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white;
   }
 
   /* dropdowns */
   .dropdown-sug {
-    @apply p-3 border-b last:border-b-0 transition-all duration-200 cursor-pointer hover:bg-blue-600 hover:text-white;
+    @apply p-3 border-b last:border-b-0 transition-all duration-200 cursor-pointer hover:bg-blue-600 hover:text-white dark:text-gray-300;
   }
     
   .dropdown-container {
-    @apply absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto;
+    @apply absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto;
   }
 
   /* headings */
   .heading {
-    @apply text-base sm:text-lg font-semibold flex items-center;
+    @apply text-base sm:text-lg font-semibold flex items-center dark:text-gray-300;
   }
   
   .heading-mb {
-    @apply text-base sm:text-lg font-semibold mb-4 flex items-center;
+    @apply text-base sm:text-lg font-semibold mb-4 flex items-center dark:text-gray-300;
   }
 
   .section-title {
-    @apply text-base sm:text-lg font-semibold mb-4;
+    @apply text-base sm:text-lg font-semibold mb-4 dark:text-gray-300;
   }
   
   .section-heading {
-    @apply text-base sm:text-lg font-semibold flex items-center;
+    @apply text-base sm:text-lg font-semibold flex items-center dark:text-gray-300;
+  }
+    
+  /* dark mode scrollbars */
+  .dark .scrollable-container::-webkit-scrollbar,
+  .dark .flight-scrollable-container::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .dark .scrollable-container::-webkit-scrollbar-track,
+  .dark .flight-scrollable-container::-webkit-scrollbar-track {
+    background: #374151;
+  }
+  
+  .dark .scrollable-container::-webkit-scrollbar-thumb,
+  .dark .flight-scrollable-container::-webkit-scrollbar-thumb {
+    background: #6b7280;
+    border-radius: 4px;
+  }
+  
+  .dark .scrollable-container::-webkit-scrollbar-thumb:hover,
+  .dark .flight-scrollable-container::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
   }
 
   /* mobile-first components */
   .table-header {
-    @apply text-left p-2 sm:p-3 font-medium;
+    @apply text-center p-2 sm:p-3 font-medium;
   }
   
   .table-header-hidden {
-    @apply text-left p-2 sm:p-3 font-medium hidden sm:table-cell;
+    @apply text-center p-2 sm:p-3 font-medium hidden sm:table-cell;
   }
   
   .table-cell {
-    @apply p-2 sm:p-3;
+    @apply p-2 sm:p-3 text-center;
   }
   
   .table-cell-hidden {
-    @apply p-2 sm:p-3 hidden sm:table-cell;
+    @apply p-2 sm:p-3 hidden sm:table-cell text-center;
   }
   
   .filter-container {
-    @apply grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 p-4 bg-gray-50 rounded-lg;
+    @apply grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg;
   }
   
   .button-group {
@@ -145,27 +270,11 @@
   }
   
   .mobile-info {
-    @apply text-sm sm:text-xs text-gray-500 sm:hidden mt-1;
+    @apply text-sm sm:text-xs text-gray-500 dark:text-gray-400 sm:hidden mt-1 text-left;
   }
   
-  .app-header {
-    @apply flex flex-col sm:flex-row sm:justify-between sm:items-center py-4 gap-2;
-  }
-  
-  .header-brand {
-    @apply flex items-center justify-center sm:justify-start text-center sm:text-left;
-  }
-  
-  .brand-icon {
-    @apply h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mr-2 sm:mr-3 flex-shrink-0;
-  }
-  
-  .brand-title {
-    @apply text-xl sm:text-2xl font-bold text-gray-900;
-  }
-  
-  .brand-tagline {
-    @apply text-sm text-gray-500 hidden sm:block;
+  .mobile-info-centered {
+    @apply text-sm sm:text-xs text-gray-500 dark:text-gray-400 sm:hidden mt-1 text-center;
   }
 
   /* nav */
@@ -226,6 +335,36 @@
 
 .react-datepicker {
   @apply font-sans;
+}
+
+.react-datepicker__day--selected {
+  background-color: #2563eb !important;
+}
+
+.react-datepicker__day--selected:hover {
+  background-color: #1d4ed8 !important;
+}
+
+/* dark mode DatePicker */
+.dark .react-datepicker {
+  background-color: #4b5563 !important;
+  border-color: #374151 !important;
+}
+
+.dark .react-datepicker__day {
+  color: white !important;
+}
+
+.dark .react-datepicker__day:hover {
+  background-color: #6b7280 !important;
+}
+
+.dark .react-datepicker__day--selected {
+  background-color: #2563eb !important;
+}
+
+.dark .react-datepicker__day--selected:hover {
+  background-color: #1d4ed8 !important;
 }
 
 /* mobile opt */

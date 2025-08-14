@@ -125,14 +125,14 @@ const CrewManager: React.FC<CrewManagerProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="bg-white p-4 rounded-lg shadow-md">
+      <div className="card">
         <h3 className="heading-mb">
           <Plus className="mr-2" size={20} />
           Add New Crew Member
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="form-grid">
           <div>
-            <label className="block text-sm font-medium mb-2">Full Name</label>
+            <label className="label">Full Name</label>
             <input
               type="text"
               placeholder="Enter crew member name"
@@ -143,7 +143,7 @@ const CrewManager: React.FC<CrewManagerProps> = ({
             />
           </div>
           <div className="relative">
-            <label className="block text-sm font-medium mb-2">Select Role</label>
+            <label className="label">Select Role</label>
             <input
               type="text"
               value={newCrew.role}
@@ -196,11 +196,11 @@ const CrewManager: React.FC<CrewManagerProps> = ({
         </div>
       </div>
 
-      <div className="bg-white p-4 rounded-lg shadow-md">
+      <div className="card">
         <h3 className="section-title">Crew Members ({filteredCrewMembers.length} of {crewMembers.length})</h3>
         <div className="filter-container">
           <div>
-            <label className="block text-sm font-medium mb-2">Filter by Name</label>
+            <label className="label">Filter by Name</label>
             <input
               type="text"
               value={nameFilter}
@@ -210,7 +210,7 @@ const CrewManager: React.FC<CrewManagerProps> = ({
             />
           </div>
           <div className="relative">
-            <label className="block text-sm font-medium mb-2">Filter by Role</label>
+            <label className="label">Filter by Role</label>
             <input
               type="text"
               value={roleFilter ? (roleFilter === 'Pilot' ? 'Pilot' : 'Flight Attendant') : ''}
@@ -261,7 +261,7 @@ const CrewManager: React.FC<CrewManagerProps> = ({
             )}
           </div>
           <div className="relative">
-            <label className="block text-sm font-medium mb-2">Filter by Availability</label>
+            <label className="label">Filter by Availability</label>
             <input
               type="text"
               value={availabilityFilter ? (availabilityFilter === 'available' ? 'Available' : 'On Leave') : ''}
@@ -325,20 +325,22 @@ const CrewManager: React.FC<CrewManagerProps> = ({
           </div>
         </div>
 
-        <div className="border rounded-lg bg-white">
-          <div className="scrollable-container">
-            <table className="w-full table-auto">
+        <div className="table-container">
+          <table className="w-full table-fixed">
             <thead>
-              <tr className="border-b">
+              <tr className="table-header-row">
                 <th className="table-header">Name</th>
                 <th className="table-header-hidden">Role</th>
                 <th className="table-header-hidden">Status</th>
                 <th className="table-header">Actions</th>
               </tr>
             </thead>
+          </table>
+          <div className="scrollable-container">
+            <table className="w-full table-fixed">
             <tbody>
               {filteredCrewMembers.map((crew) => (
-                <tr key={crew.id} className="border-b hover:bg-gray-50">
+                <tr key={crew.id} className="table-row">
                   <td className="table-cell">
                     <div className="font-medium">
                       {editingCrew?.id === crew.id ? (
@@ -352,7 +354,7 @@ const CrewManager: React.FC<CrewManagerProps> = ({
                         crew.name
                       )}
                     </div>
-                    <div className="mobile-info">
+                    <div className="mobile-info-centered">
                       {crew.role} • {crew.is_on_leave ? 'On Leave' : 'Available'}
                     </div>
                   </td>
@@ -393,7 +395,7 @@ const CrewManager: React.FC<CrewManagerProps> = ({
                     )}
                   </td>
                   <td className="table-cell">
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1 justify-center">
                       {editingCrew?.id === crew.id ? (
                         <>
                           <button onClick={saveEdit} className="text-green-600 text-xs px-2 py-1">Save</button>
@@ -401,13 +403,13 @@ const CrewManager: React.FC<CrewManagerProps> = ({
                         </>
                       ) : (
                         <>
-                          <button onClick={() => viewCrewSchedule(crew.id)} className="text-blue-600 p-1" title="View">
+                          <button onClick={() => viewCrewSchedule(crew.id)} className="text-blue-600 dark:text-blue-400 p-1" title="View">
                             <Eye size={18} className="sm:w-4 sm:h-4" />
                           </button>
-                          <button onClick={() => startEdit(crew)} className="text-yellow-600 p-1" title="Edit">
+                          <button onClick={() => startEdit(crew)} className="text-yellow-600 dark:text-yellow-400 p-1" title="Edit">
                             <Edit size={18} className="sm:w-4 sm:h-4" />
                           </button>
-                          <button onClick={() => deleteCrew(crew.id)} className="text-red-600 p-1" title="Delete">
+                          <button onClick={() => deleteCrew(crew.id)} className="text-red-600 dark:text-red-400 p-1" title="Delete">
                             <Trash2 size={18} className="sm:w-4 sm:h-4" />
                           </button>
                         </>
@@ -419,7 +421,7 @@ const CrewManager: React.FC<CrewManagerProps> = ({
             </tbody>
             </table>
             {filteredCrewMembers.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-empty">
                 {crewMembers.length === 0 ? 'No crew members found. Add crew members to get started.' : 'No crew members match the selected filters.'}
               </div>
             )}

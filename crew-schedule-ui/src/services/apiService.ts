@@ -61,6 +61,13 @@ export class ApiService {
     return this.handleResponse<{ message: string }>(response);
   }
 
+  static async removeAllFlights(): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE}/flights`, {
+      method: 'DELETE'
+    });
+    return this.handleResponse<{ message: string }>(response);
+  }
+
   // schedule managment
   static async getSchedules(): Promise<Schedule[]> {
     const response = await fetch(`${API_BASE}/schedules`);

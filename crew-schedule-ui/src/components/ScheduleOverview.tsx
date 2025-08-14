@@ -55,26 +55,37 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="bg-white p-4 rounded-lg shadow-md">
+      <div className="card">
         <div className="header-container">
           <h3 className="section-heading">
-            <BookOpen className="mr-2" size={20} />
+            <BookOpen className="icon-mr" size={20} />
             Flight Schedules ({filteredSchedules.length})
           </h3>
-          <div className="flex items-center space-x-2">
-            <Calendar size={18} className="sm:w-4 sm:h-4" />
-            <DatePicker
-              selected={selectedDate}
-              onChange={(date) => onDateChange(date || new Date())}
-              dateFormat="MMM d, yyyy"
-              className="input-small"
-            />
+          <div className="flex-items">
+            <Calendar size={18} className="icon-sm" />
+            <div className="relative">
+              <DatePicker
+                selected={selectedDate}
+                onChange={(date) => onDateChange(date || new Date())}
+                dateFormat="MMM d, yyyy"
+                className="input-small"
+              />
+              {selectedDate && (
+                <button
+                  onClick={() => onDateChange(new Date())}
+                  className="btn-clear"
+                  type="button"
+                >
+                  ×
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="filter-container">
           <div>
-            <label className="block text-sm font-medium mb-2">Filter by Crew Member</label>
+            <label className="label">Filter by Crew Member</label>
             <input
               type="text"
               value={crewFilter}
@@ -84,7 +95,7 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Filter by Flight</label>
+            <label className="label">Filter by Flight</label>
             <input
               type="text"
               value={flightFilter}
@@ -94,7 +105,7 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
             />
           </div>
           <div className="relative">
-            <label className="block text-sm font-medium mb-2">Filter by Time</label>
+            <label className="label">Filter by Time</label>
             <input
               type="text"
               value={timeFilter ? (timeFilter === 'am' ? 'AM Flights' : 'PM Flights') : ''}
@@ -158,15 +169,14 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
           </div>
         </div>
 
-        <div className="mb-4 text-sm text-gray-600">
-          Showing schedules for: <span className="font-medium">{selectedDate.toLocaleDateString()}</span>
+        <div className="text-info">
+          Total schedules in system: {schedules.length} | Showing schedules for: <span className="font-medium">{selectedDate.toLocaleDateString()}</span>
         </div>
 
-        <div className="border rounded-lg bg-white">
-          <div className="scrollable-container">
-            <table className="w-full table-auto">
+        <div className="table-container">
+          <table className="w-full table-fixed">
             <thead>
-              <tr className="border-b">
+              <tr className="table-header-row">
                 <th className="table-header">Crew Member</th>
                 <th className="table-header-hidden">Flight</th>
                 <th className="table-header-hidden">Times</th>
@@ -175,14 +185,17 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
                 <th className="table-header">Actions</th>
               </tr>
             </thead>
+          </table>
+          <div className="scrollable-container">
+            <table className="w-full table-fixed">
             <tbody>
               {filteredSchedules.map((schedule) => (
-                <tr key={schedule.id} className="border-b hover:bg-gray-50">
+                <tr key={schedule.id} className="table-row">
                   <td className="table-cell">
                     <div className="font-medium">{schedule.crew_name}</div>
                     <div className="mobile-info">
                       {schedule.flight_number} • {schedule.origin} → {schedule.destination}<br/>
-                      <Clock size={14} className="inline mr-1 sm:w-3 sm:h-3" />
+                      <Clock size={14} className="icon-inline" />
                       {new Date(schedule.departure_time).toLocaleTimeString()} → {new Date(schedule.arrival_time).toLocaleTimeString()}<br/>
                       {schedule.duration_text}
                     </div>
@@ -197,38 +210,32 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
                   <td className="table-cell-hidden">{schedule.origin} → {schedule.destination}</td>
                   <td className="table-cell-hidden">{schedule.duration_text}</td>
                   <td className="table-cell">
-                    <button
-                      onClick={() => deleteAssignment(schedule.id)}
-                      className="text-red-600 hover:text-red-800 p-2"
-                      title="Delete"
-                    >
-                      <Trash2 size={18} className="sm:w-4 sm:h-4" />
-                    </button>
+                    <div className="flex justify-center">
+                      <button
+                        onClick={() => deleteAssignment(schedule.id)}
+                        className="text-delete p-2"
+                        title="Delete"
+                      >
+                        <Trash2 size={18} className="sm:w-4 sm:h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
-              {filteredSchedules.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="text-center py-8 text-gray-500">
+            </tbody>
+            </table>
+            {filteredSchedules.length === 0 && (
+              <div className="text-empty">
                     {schedules.length === 0 
                       ? "No schedules found. Assign flights to crew members to view them."
                       : (crewFilter || flightFilter || timeFilter) 
                         ? "No schedules match the selected filters."
                         : `No schedules found for ${selectedDate.toLocaleDateString()}. Try selecting a different date.`
                     }
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            </table>
+              </div>
+            )}
           </div>
         </div>
-
-        {schedules.length > 0 && (
-          <div className="mt-4 text-sm text-gray-500">
-            Total schedules in system: {schedules.length} | Showing for selected date: {filteredSchedules.length}
-          </div>
-        )}
       </div>
     </div>
   );
