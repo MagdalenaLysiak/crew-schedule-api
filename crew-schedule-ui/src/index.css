@@ -14,7 +14,7 @@
     @apply w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
   }
   
-  button {
+  button:not(.nav-tab) {
     @apply cursor-pointer border-0 rounded-lg font-medium transition-colors inline-flex items-center justify-center;
   }
   
@@ -40,6 +40,17 @@
 }
 
 @layer components {
+  .app-container {
+    @apply max-w-[1000px] mx-auto px-2 sm:px-4;
+  }
+
+  .scrollable-container {
+    @apply h-[350px] sm:h-[385px] overflow-y-auto rounded-lg;
+  }
+  
+  .flight-scrollable-container {
+    @apply h-[400px] sm:h-[615px] overflow-y-auto rounded-lg pb-4;
+  }
   /* buttons */
   .btn-secondary-sm {
     @apply bg-blue-600 text-white px-4 h-10 rounded-lg hover:bg-gray-700 text-sm;
@@ -156,13 +167,50 @@
   .brand-tagline {
     @apply text-sm text-gray-500 hidden sm:block;
   }
+
+  /* nav */
   
   .nav-tab {
-    @apply flex flex-col sm:flex-row items-center px-2 sm:px-1 py-3 sm:py-4 border-b-2 font-medium text-xs sm:text-sm;
+    @apply flex flex-col sm:flex-row items-center px-2 sm:px-1 py-3 sm:py-4 font-medium text-xs sm:text-sm rounded-none cursor-pointer;
+    transition: color 0.3s ease-in-out;
   }
   
   .nav-container {
-    @apply grid grid-cols-3 gap-1 sm:flex sm:space-x-8;
+    @apply grid grid-cols-3 gap-1 sm:flex sm:space-x-8 relative;
+  }
+  
+  .nav-container::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: calc(100% / 3);
+    height: 2px;
+    background-color: #3b82f6;
+    transition: transform 0.3s ease-in-out;
+    transform: translateX(0%);
+  }
+  
+  .nav-container[data-active="1"]::after {
+    transform: translateX(100%);
+  }
+  
+  .nav-container[data-active="2"]::after {
+    transform: translateX(200%);
+  }
+  
+  @media (min-width: 640px) {
+    .nav-container::after {
+      width: 155px;
+    }
+    
+    .nav-container[data-active="1"]::after {
+      transform: translateX(190px);
+    }
+    
+    .nav-container[data-active="2"]::after {
+      transform: translateX(380px);
+    }
   }
 }
 

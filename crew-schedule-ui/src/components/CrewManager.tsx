@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, Users, Eye, Trash2, Edit } from 'lucide-react';
 import { CrewMember, NewCrewMember, UpdateCrewMember, Message } from '../types';
 import { ApiService } from '../services/apiService';
@@ -26,6 +26,22 @@ const CrewManager: React.FC<CrewManagerProps> = ({
   const [editingCrew, setEditingCrew] = useState<CrewMember | null>(null);
   const [editForm, setEditForm] = useState<UpdateCrewMember>({});
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  const [showFilterRoleDropdown, setShowFilterRoleDropdown] = useState(false);
+  const [nameFilter, setNameFilter] = useState<string>('');
+  const [roleFilter, setRoleFilter] = useState<string>('');
+  const [availabilityFilter, setAvailabilityFilter] = useState<string>('');
+  const [showAvailabilityDropdown, setShowAvailabilityDropdown] = useState(false);
+
+  const filteredCrewMembers = useMemo(() => {
+    return crewMembers.filter((crew) => {
+      const nameMatch = !nameFilter || crew.name.toLowerCase().includes(nameFilter.toLowerCase());
+      const roleMatch = !roleFilter || crew.role === roleFilter;
+      const availabilityMatch = !availabilityFilter || 
+        (availabilityFilter === 'available' && !crew.is_on_leave) ||
+        (availabilityFilter === 'on-leave' && crew.is_on_leave);
+      return nameMatch && roleMatch && availabilityMatch;
+    });
+  }, [crewMembers, nameFilter, roleFilter, availabilityFilter]);
 
   const createCrew = async (): Promise<void> => {
     if (!newCrew.name.trim()) {
@@ -181,15 +197,137 @@ const CrewManager: React.FC<CrewManagerProps> = ({
       </div>
 
       <div className="bg-white p-4 rounded-lg shadow-md">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="heading">
-            <Users className="mr-2" size={20} />
-            Crew Members ({crewMembers.length})
-          </h3>
+        <h3 className="section-title">Crew Members ({filteredCrewMembers.length} of {crewMembers.length})</h3>
+        <div className="filter-container">
+          <div>
+            <label className="block text-sm font-medium mb-2">Filter by Name</label>
+            <input
+              type="text"
+              value={nameFilter}
+              onChange={(e) => setNameFilter(e.target.value)}
+              placeholder="Search by name..."
+              className="input-small"
+            />
+          </div>
+          <div className="relative">
+            <label className="block text-sm font-medium mb-2">Filter by Role</label>
+            <input
+              type="text"
+              value={roleFilter ? (roleFilter === 'Pilot' ? 'Pilot' : 'Flight Attendant') : ''}
+              onChange={() => {}}
+              onFocus={() => setShowFilterRoleDropdown(true)}
+              onBlur={() => {
+                setTimeout(() => {
+                  setShowFilterRoleDropdown(false);
+                }, 200);
+              }}
+              placeholder="All Roles"
+              className="input-small"
+              readOnly
+            />
+            {showFilterRoleDropdown && (
+              <div className="dropdown-container">
+                <div
+                  onMouseDown={() => {
+                    setRoleFilter('');
+                    setShowFilterRoleDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">All Roles</div>
+                  <div className="text-sm">Show all crew members</div>
+                </div>
+                <div
+                  onMouseDown={() => {
+                    setRoleFilter('Pilot');
+                    setShowFilterRoleDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">Pilot</div>
+                  <div className="text-sm">Aircraft pilots only</div>
+                </div>
+                <div
+                  onMouseDown={() => {
+                    setRoleFilter('Flight attendant');
+                    setShowFilterRoleDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">Flight Attendant</div>
+                  <div className="text-sm">Cabin crew only</div>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="relative">
+            <label className="block text-sm font-medium mb-2">Filter by Availability</label>
+            <input
+              type="text"
+              value={availabilityFilter ? (availabilityFilter === 'available' ? 'Available' : 'On Leave') : ''}
+              onChange={() => {}}
+              onFocus={() => setShowAvailabilityDropdown(true)}
+              onBlur={() => {
+                setTimeout(() => {
+                  setShowAvailabilityDropdown(false);
+                }, 200);
+              }}
+              placeholder="All Status"
+              className="input-small"
+              readOnly
+            />
+            {showAvailabilityDropdown && (
+              <div className="dropdown-container">
+                <div
+                  onMouseDown={() => {
+                    setAvailabilityFilter('');
+                    setShowAvailabilityDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">All Status</div>
+                  <div className="text-sm">Show all crew members</div>
+                </div>
+                <div
+                  onMouseDown={() => {
+                    setAvailabilityFilter('available');
+                    setShowAvailabilityDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">Available</div>
+                  <div className="text-sm">Available crew only</div>
+                </div>
+                <div
+                  onMouseDown={() => {
+                    setAvailabilityFilter('on-leave');
+                    setShowAvailabilityDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">On Leave</div>
+                  <div className="text-sm">Crew on leave only</div>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="sm:col-span-3">
+            <button
+              onClick={() => {
+                setNameFilter('');
+                setRoleFilter('');
+                setAvailabilityFilter('');
+              }}
+              className="btn-secondary-sm"
+            >
+              Clear Filters
+            </button>
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full table-auto">
+        <div className="border rounded-lg bg-white">
+          <div className="scrollable-container">
+            <table className="w-full table-auto">
             <thead>
               <tr className="border-b">
                 <th className="table-header">Name</th>
@@ -199,7 +337,7 @@ const CrewManager: React.FC<CrewManagerProps> = ({
               </tr>
             </thead>
             <tbody>
-              {crewMembers.map((crew) => (
+              {filteredCrewMembers.map((crew) => (
                 <tr key={crew.id} className="border-b hover:bg-gray-50">
                   <td className="table-cell">
                     <div className="font-medium">
@@ -279,12 +417,13 @@ const CrewManager: React.FC<CrewManagerProps> = ({
                 </tr>
               ))}
             </tbody>
-          </table>
-          {crewMembers.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No crew members found. Add crew members to get started.
-            </div>
-          )}
+            </table>
+            {filteredCrewMembers.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                {crewMembers.length === 0 ? 'No crew members found. Add crew members to get started.' : 'No crew members match the selected filters.'}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

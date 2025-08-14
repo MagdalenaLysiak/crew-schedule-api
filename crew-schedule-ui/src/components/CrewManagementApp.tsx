@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Users, Plane } from 'lucide-react';
+import { Users, Plane, BookOpen } from 'lucide-react';
 import { CrewMember, Flight, Schedule, Message } from '../types';
 import { ApiService } from '../services/apiService';
 import CrewManager from './CrewManager';
@@ -22,11 +22,12 @@ const CrewManagementApp: React.FC = () => {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<Message>({ type: '', text: '' });
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const tabs: TabConfig[] = [
     { id: 'crew', label: 'Crew Management', icon: Users },
     { id: 'assignments', label: 'Flight Assignments', icon: Plane },
-    { id: 'schedules', label: 'Schedule Overview', icon: Calendar }
+    { id: 'schedules', label: 'Schedule Overview', icon: BookOpen }
   ];
 
   const fetchCrewMembers = async (): Promise<void> => {
@@ -105,6 +106,8 @@ const CrewManagementApp: React.FC = () => {
         return (
           <ScheduleOverview
             schedules={schedules}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
             onShowMessage={showMessage}
             onRefreshSchedules={fetchSchedules}
           />
@@ -117,7 +120,7 @@ const CrewManagementApp: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="bg-white shadow-sm">
-        <div className="px-2 sm:px-4">
+        <div className="app-container">
           <div className="app-header">
             <div className="header-brand">
               <Plane className="brand-icon" />
@@ -133,15 +136,15 @@ const CrewManagementApp: React.FC = () => {
             </div>
           </div>
 
-          <nav className="nav-container">
+          <nav className="nav-container" data-active={tabs.findIndex(tab => tab.id === activeTab)}>
             {tabs.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
                 className={`nav-tab ${
                   activeTab === id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500'
+                    ? 'text-blue-600'
+                    : 'text-gray-500'
                 }`}
               >
                 <Icon className="sm:mr-2" size={16} />
@@ -152,7 +155,7 @@ const CrewManagementApp: React.FC = () => {
         </div>
       </div>
 
-      <main className="px-2 sm:px-4 py-4">
+      <main className="app-container py-4">
         <MessageBanner message={message} />
         {renderActiveTab()}
       </main>

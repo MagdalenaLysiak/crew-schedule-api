@@ -342,7 +342,7 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
         </div>
 
         <div className="border rounded-lg bg-white">
-          <div className="h-[400px] sm:h-[615px] overflow-y-auto rounded-lg pb-4">
+          <div className="flight-scrollable-container">
             <table className="w-full table-auto">
               <thead className="sticky top-0 border-b bg-gray-50">
                 <tr>
