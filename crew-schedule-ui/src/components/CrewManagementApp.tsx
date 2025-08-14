@@ -117,37 +117,42 @@ const CrewManagementApp: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <Plane className="h-8 w-8 text-blue-600 mr-3" />
-              <h1 className="text-2xl font-bold text-gray-900">Flight Crew Management</h1>
+        <div className="px-2 sm:px-4">
+          <div className="app-header">
+            <div className="header-brand">
+              <Plane className="brand-icon" />
+              <div>
+                <h1 className="brand-title">Flight Crew Management</h1>
+                <div className="text-sm text-gray-500 sm:hidden">
+                  Your easy scheduling app!
+                </div>
+              </div>
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="brand-tagline">
               Your easy scheduling app!
             </div>
           </div>
 
-          <nav className="flex space-x-8">
+          <nav className="nav-container">
             {tabs.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
-                className={`flex items-center px-1 py-4 border-b-2 font-medium text-sm ${
+                className={`nav-tab ${
                   activeTab === id
                     ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    : 'border-transparent text-gray-500'
                 }`}
               >
-                <Icon className="mr-2" size={16} />
-                {label}
+                <Icon className="sm:mr-2" size={16} />
+                <span className="mt-1 sm:mt-0">{label.split(' ')[0]}<span className="hidden sm:inline"> {label.split(' ').slice(1).join(' ')}</span></span>
               </button>
             ))}
           </nav>
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <main className="px-2 sm:px-4 py-4">
         <MessageBanner message={message} />
         {renderActiveTab()}
       </main>

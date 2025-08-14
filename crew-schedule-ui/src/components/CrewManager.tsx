@@ -108,8 +108,8 @@ const CrewManager: React.FC<CrewManagerProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-md">
+    <div className="space-y-4">
+      <div className="bg-white p-4 rounded-lg shadow-md">
         <h3 className="heading-mb">
           <Plus className="mr-2" size={20} />
           Add New Crew Member
@@ -168,7 +168,7 @@ const CrewManager: React.FC<CrewManagerProps> = ({
             )}
           </div>
         </div>
-        <div className="flex space-x-4 mt-4">
+        <div className="button-group mt-4">
           <button
             onClick={createCrew}
             disabled={loading || isCreating}
@@ -180,7 +180,7 @@ const CrewManager: React.FC<CrewManagerProps> = ({
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-md">
+      <div className="bg-white p-4 rounded-lg shadow-md">
         <div className="flex justify-between items-center mb-4">
           <h3 className="heading">
             <Users className="mr-2" size={20} />
@@ -192,28 +192,33 @@ const CrewManager: React.FC<CrewManagerProps> = ({
           <table className="w-full table-auto">
             <thead>
               <tr className="border-b">
-                <th className="text-left p-3">Name</th>
-                <th className="text-left p-3">Role</th>
-                <th className="text-left p-3">Status</th>
-                <th className="text-left p-3">Actions</th>
+                <th className="table-header">Name</th>
+                <th className="table-header-hidden">Role</th>
+                <th className="table-header-hidden">Status</th>
+                <th className="table-header">Actions</th>
               </tr>
             </thead>
             <tbody>
               {crewMembers.map((crew) => (
                 <tr key={crew.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3 font-medium">
-                    {editingCrew?.id === crew.id ? (
-                      <input
-                        type="text"
-                        value={editForm.name || ''}
-                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                        className="p-1 border rounded w-full"
-                      />
-                    ) : (
-                      crew.name
-                    )}
+                  <td className="table-cell">
+                    <div className="font-medium">
+                      {editingCrew?.id === crew.id ? (
+                        <input
+                          type="text"
+                          value={editForm.name || ''}
+                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                          className="p-1 border rounded w-full"
+                        />
+                      ) : (
+                        crew.name
+                      )}
+                    </div>
+                    <div className="mobile-info">
+                      {crew.role} • {crew.is_on_leave ? 'On Leave' : 'Available'}
+                    </div>
                   </td>
-                  <td className="p-3">
+                  <td className="table-cell-hidden">
                     {editingCrew?.id === crew.id ? (
                       <select
                         value={editForm.role || crew.role}
@@ -231,7 +236,7 @@ const CrewManager: React.FC<CrewManagerProps> = ({
                       </span>
                     )}
                   </td>
-                  <td className="p-3">
+                  <td className="table-cell-hidden">
                     {editingCrew?.id === crew.id ? (
                       <select
                         value={editForm.is_on_leave !== undefined ? editForm.is_on_leave.toString() : crew.is_on_leave.toString()}
@@ -249,45 +254,23 @@ const CrewManager: React.FC<CrewManagerProps> = ({
                       </span>
                     )}
                   </td>
-                  <td className="p-3">
-                    <div className="flex space-x-2">
+                  <td className="table-cell">
+                    <div className="flex flex-wrap gap-1">
                       {editingCrew?.id === crew.id ? (
                         <>
-                          <button
-                            onClick={saveEdit}
-                            className="btn-text-green"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="btn-text-gray"
-                          >
-                            Cancel
-                          </button>
+                          <button onClick={saveEdit} className="text-green-600 text-xs px-2 py-1">Save</button>
+                          <button onClick={cancelEdit} className="text-gray-600 text-xs px-2 py-1">Cancel</button>
                         </>
                       ) : (
                         <>
-                          <button
-                            onClick={() => viewCrewSchedule(crew.id)}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="View Schedule"
-                          >
-                            <Eye size={16} />
+                          <button onClick={() => viewCrewSchedule(crew.id)} className="text-blue-600 p-1" title="View">
+                            <Eye size={18} className="sm:w-4 sm:h-4" />
                           </button>
-                          <button
-                            onClick={() => startEdit(crew)}
-                            className="text-yellow-600 hover:text-yellow-800"
-                            title="Edit"
-                          >
-                            <Edit size={16} />
+                          <button onClick={() => startEdit(crew)} className="text-yellow-600 p-1" title="Edit">
+                            <Edit size={18} className="sm:w-4 sm:h-4" />
                           </button>
-                          <button
-                            onClick={() => deleteCrew(crew.id)}
-                            className="text-red-600 hover:text-red-800"
-                            title="Delete"
-                          >
-                            <Trash2 size={16} />
+                          <button onClick={() => deleteCrew(crew.id)} className="text-red-600 p-1" title="Delete">
+                            <Trash2 size={18} className="sm:w-4 sm:h-4" />
                           </button>
                         </>
                       )}

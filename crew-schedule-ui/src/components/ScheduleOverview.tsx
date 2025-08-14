@@ -38,15 +38,15 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold flex items-center">
+    <div className="space-y-4">
+      <div className="bg-white p-4 rounded-lg shadow-md">
+        <div className="header-container">
+          <h3 className="section-heading">
             <Calendar className="mr-2" size={20} />
             Flight Schedules ({filteredSchedules.length})
           </h3>
           <div className="flex items-center space-x-2">
-            <Calendar size={16} />
+            <Calendar size={18} className="sm:w-4 sm:h-4" />
             <DatePicker
               selected={selectedDate}
               onChange={(date) => setSelectedDate(date || new Date())}
@@ -64,51 +64,58 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
           <table className="w-full table-auto">
             <thead>
               <tr className="border-b">
-                <th className="text-left p-3">Crew Member</th>
-                <th className="text-left p-3">Flight</th>
-                <th className="text-left p-3">Times converted to UTC</th>
-                <th className="text-left p-3">Route</th>
-                <th className="text-left p-3">Duration</th>
-                <th className="text-left p-3">Actions</th>
+                <th className="table-header">Crew Member</th>
+                <th className="table-header-hidden">Flight</th>
+                <th className="table-header-hidden">Times</th>
+                <th className="table-header-hidden">Route</th>
+                <th className="table-header-hidden">Duration</th>
+                <th className="table-header">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredSchedules.map((schedule) => (
                 <tr key={schedule.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3">
+                  <td className="table-cell">
                     <div className="font-medium">{schedule.crew_name}</div>
-                    <div className="text-sm text-gray-600">ID: {schedule.crew_id}</div>
+                    <div className="mobile-info">
+                      {schedule.flight_number} • {schedule.origin} → {schedule.destination}<br/>
+                      <Clock size={14} className="inline mr-1 sm:w-3 sm:h-3" />
+                      {new Date(schedule.departure_time).toLocaleTimeString()} → {new Date(schedule.arrival_time).toLocaleTimeString()}<br/>
+                      {schedule.duration_text}
+                    </div>
                   </td>
-                  <td className="p-3 font-medium">{schedule.flight_number}</td>
-                  <td className="p-3 text-sm">
+                  <td className="table-cell-hidden font-medium">{schedule.flight_number}</td>
+                  <td className="table-cell-hidden text-sm">
                     <div className="flex items-center">
                       <Clock size={14} className="mr-1" />
                       {new Date(schedule.departure_time).toLocaleTimeString()} → {new Date(schedule.arrival_time).toLocaleTimeString()}
                     </div>
                   </td>
-                  <td className="p-3">{schedule.origin} → {schedule.destination}</td>
-                  <td className="p-3">{schedule.duration_text}</td>
-                  <td className="p-3">
+                  <td className="table-cell-hidden">{schedule.origin} → {schedule.destination}</td>
+                  <td className="table-cell-hidden">{schedule.duration_text}</td>
+                  <td className="table-cell">
                     <button
                       onClick={() => deleteAssignment(schedule.id)}
-                      className="text-red-600 hover:text-red-800"
-                      title="Delete Assignment"
+                      className="text-red-600 hover:text-red-800 p-2"
+                      title="Delete"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={18} className="sm:w-4 sm:h-4" />
                     </button>
                   </td>
                 </tr>
               ))}
+              {filteredSchedules.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="text-center py-8 text-gray-500">
+                    {schedules.length === 0 
+                      ? "No schedules found. Assign flights to crew members to view them."
+                      : `No schedules found for ${selectedDate.toLocaleDateString()}. Try selecting a different date.`
+                    }
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
-          {filteredSchedules.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              {schedules.length === 0 
-                ? "No schedules found. Assign flights to crew members to view them."
-                : `No schedules found for ${selectedDate.toLocaleDateString()}. Try selecting a different date.`
-              }
-            </div>
-          )}
         </div>
 
         {schedules.length > 0 && (
