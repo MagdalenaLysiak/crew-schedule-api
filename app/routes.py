@@ -14,7 +14,7 @@ router = APIRouter()
 business_rules = BusinessRules()
 
 
-@router.post("/crew", response_model=schemas.CrewMemberRead)
+@router.post("/crew", response_model=schemas.CrewMemberRead, status_code=201)
 def create_crew(crew: schemas.CrewMemberCreate, db: Session = Depends(get_db), logger: LoggerService = Depends(get_logger_service)):
     db_crew = models.CrewMember(**crew.dict())
     db.add(db_crew)

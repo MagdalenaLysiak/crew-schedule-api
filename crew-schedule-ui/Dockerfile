@@ -3,6 +3,11 @@ FROM node:20-alpine as build
 WORKDIR /app
 
 COPY package*.json ./
+COPY tailwind.config.js ./
+COPY postcss.config.js ./
+COPY vite.config.ts ./
+COPY tsconfig*.json ./
+
 RUN npm ci
 
 COPY . .

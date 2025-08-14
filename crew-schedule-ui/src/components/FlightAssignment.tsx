@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Plane, Search, CheckCircle, XCircle } from 'lucide-react';
 import { CrewMember, Flight, AvailabilityCheck, Message } from '../types';
 import { ApiService } from '../services/apiService.ts';
-import styles from '../module styles/FlightAssignment.module.css';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 interface FlightAssignmentProps {
   crewMembers: CrewMember[];
@@ -25,12 +26,14 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
   const [selectedFlight, setSelectedFlight] = useState<string>('');
   const [flightSearch, setFlightSearch] = useState<string>('');
   const [showFlightSuggestions, setShowFlightSuggestions] = useState(false);
+  const [showCrewSuggestions, setShowCrewSuggestions] = useState(false);
   const [availabilityCheck, setAvailabilityCheck] = useState<AvailabilityCheck | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   const [isLoadingFlights, setIsLoadingFlights] = useState(false);
-  const [filterDate, setFilterDate] = useState<string>('');
+  const [filterDate, setFilterDate] = useState<Date | null>(null);
   const [filterDirection, setFilterDirection] = useState<string>('');
+  const [showDirectionDropdown, setShowDirectionDropdown] = useState(false);
 
   const checkAvailability = async (): Promise<void> => {
     if (!selectedCrew || !selectedFlight) return;
@@ -81,8 +84,8 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
   };
 
   const filteredFlights = flights.filter((flight) => {
-    const flightDate = new Date(flight.departure_time).toISOString().split('T')[0];
-    const dateMatch = !filterDate || flightDate === filterDate;
+    const flightDate = new Date(flight.departure_time);
+    const dateMatch = !filterDate || flightDate.toDateString() === filterDate.toDateString();
     const directionMatch = !filterDirection || flight.direction === filterDirection;
     return dateMatch && directionMatch;
   });
@@ -102,26 +105,51 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
+        <h3 className="heading-mb">
           <Plane className="mr-2" size={20} />
           Flight Assignment
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
+          <div className="relative">
             <label className="block text-sm font-medium mb-2">Select Crew Member</label>
-            <select
-              value={selectedCrew}
-              onChange={(e) => setSelectedCrew(e.target.value)}
-              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Choose crew member...</option>
-              {crewMembers.map((crew) => (
-                <option key={crew.id} value={crew.id.toString()}>
-                  {crew.name} ({crew.role})
-                </option>
-              ))}
-            </select>
+            <input
+              type="text"
+              value={selectedCrew ? crewMembers.find(c => c.id.toString() === selectedCrew)?.name + ` (${crewMembers.find(c => c.id.toString() === selectedCrew)?.role})` || '' : ''}
+              onChange={(e) => {
+                const searchValue = e.target.value.toLowerCase();
+                setShowCrewSuggestions(true);
+                if (!e.target.value) {
+                  setSelectedCrew('');
+                  setShowCrewSuggestions(false);
+                }
+              }}
+              onFocus={() => setShowCrewSuggestions(true)}
+              onBlur={() => {
+                setTimeout(() => {
+                  setShowCrewSuggestions(false);
+                }, 200);
+              }}
+              placeholder="Choose crew member..."
+              className="input-field"
+            />
+            {showCrewSuggestions && (
+              <div className="dropdown-container">
+                {crewMembers.map((crew) => (
+                  <div
+                    key={crew.id}
+                    onMouseDown={() => {
+                      setSelectedCrew(crew.id.toString());
+                      setShowCrewSuggestions(false);
+                    }}
+                    className="dropdown-sug"
+                  >
+                    <div className="font-medium">{crew.name}</div>
+                    <div className="text-sm">{crew.role} | {crew.is_on_leave ? 'On Leave' : 'Available'}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="relative">
@@ -147,10 +175,10 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
                 }, 200);
               }}
               placeholder="Search by flight number (e.g., BA123, EZY456)..."
-              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="input-field"
             />
             {showFlightSuggestions && searchFilteredFlights.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              <div className="dropdown-container">
                 {searchFilteredFlights.map((flight) => {
                   const depDate = new Date(flight.departure_time);
                   const dateStr = depDate.toLocaleDateString();
@@ -158,7 +186,7 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
                     <div
                       key={flight.id}
                       onMouseDown={() => selectFlight(flight)}
-                      className={`p-3 border-b last:border-b-0 ${styles.flightSuggestion}`}
+                      className="dropdown-sug"
                     >
                       <div className="font-medium">{flight.flight_number}</div>
                       <div className="text-sm">
@@ -176,7 +204,7 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
           <button
             onClick={checkAvailability}
             disabled={!selectedCrew || !selectedFlight || loading || isChecking}
-            className={`bg-blue-600 text-white px-4 rounded-lg hover:bg-yellow-700 disabled:opacity-50 flex items-center ${styles.flightButton}`}
+            className="btn-check"
           >
             <Search className="mr-2" size={16} />
             {isChecking ? 'Checking...' : 'Check Availability'}
@@ -185,7 +213,7 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
           <button
             onClick={loadFlights}
             disabled={loading || isLoadingFlights}
-            className={`bg-green-600 text-white px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 ${styles.flightButton}`}
+            className="btn-load"
           >
             {isLoadingFlights ? 'Loading...' : 'Load Today\'s Flights'}
           </button>
@@ -219,7 +247,7 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
                 <button
                   onClick={assignFlight}
                   disabled={loading || isAssigning}
-                  className={`bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 ${styles.flightButton}`}
+                  className="btn-blue"
                 >
                   {isAssigning ? 'Assigning...' : 'Assign Flight'}
                 </button>
@@ -234,35 +262,79 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
 
       <div className="bg-white p-6 rounded-lg shadow-md">
         <h3 className="text-lg font-semibold mb-4">Available Flights ({filteredFlights.length} of {flights.length})</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
+        <div className="filter-grid">
           <div>
             <label className="block text-sm font-medium mb-2">Filter by Date</label>
-            <input
-              type="date"
-              value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="w-full">
+              <DatePicker
+                selected={filterDate}
+                onChange={(date) => setFilterDate(date)}
+                placeholderText="Select date..."
+                className="input-small"
+                dateFormat="MMM d, yyyy"
+                isClearable
+                wrapperClassName="w-full"
+              />
+            </div>
           </div>
-          <div>
+          <div className="relative">
             <label className="block text-sm font-medium mb-2">Filter by Direction</label>
-            <select
-              value={filterDirection}
-              onChange={(e) => setFilterDirection(e.target.value)}
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Directions</option>
-              <option value="departure">Departure</option>
-              <option value="arrival">Arrival</option>
-            </select>
+            <input
+              type="text"
+              value={filterDirection ? (filterDirection === 'departure' ? 'Departure' : 'Arrival') : ''}
+              onChange={() => {}}
+              onFocus={() => setShowDirectionDropdown(true)}
+              onBlur={() => {
+                setTimeout(() => {
+                  setShowDirectionDropdown(false);
+                }, 200);
+              }}
+              placeholder="All Directions"
+              className="input-small"
+              readOnly
+            />
+            {showDirectionDropdown && (
+              <div className="dropdown-container">
+                <div
+                  onMouseDown={() => {
+                    setFilterDirection('');
+                    setShowDirectionDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">All Directions</div>
+                  <div className="text-sm">Show both departures and arrivals</div>
+                </div>
+                <div
+                  onMouseDown={() => {
+                    setFilterDirection('departure');
+                    setShowDirectionDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">Departure</div>
+                  <div className="text-sm">Flights leaving from LTN</div>
+                </div>
+                <div
+                  onMouseDown={() => {
+                    setFilterDirection('arrival');
+                    setShowDirectionDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">Arrival</div>
+                  <div className="text-sm">Flights arriving at LTN</div>
+                </div>
+              </div>
+            )}
           </div>
           <div className="md:col-span-2">
             <button
               onClick={() => {
-                setFilterDate('');
+                setFilterDate(null);
                 setFilterDirection('');
               }}
-              className={`bg-blue-600 text-white px-4 rounded-lg hover:bg-gray-700 text-sm ${styles.flightButton}`}
+              className="btn-secondary-sm"
             >
               Clear Filters
             </button>
@@ -270,9 +342,9 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
         </div>
 
         <div className="border rounded-lg bg-white">
-          <div className={styles.flightTableContainer}>
+          <div className="h-[615px] overflow-y-auto rounded-lg pb-4">
             <table className="w-full table-auto">
-              <thead className={`sticky top-0 border-b ${styles.flightTableHeader}`}>
+              <thead className="sticky top-0 border-b bg-gray-50">
                 <tr>
                   <th className="text-left p-3 font-medium">Flight</th>
                   <th className="text-left p-3 font-medium">Route</th>

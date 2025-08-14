@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Calendar, Clock, Trash2 } from 'lucide-react';
 import { Schedule, Message } from '../types';
 import { ApiService } from '../services/apiService.ts';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 interface ScheduleOverviewProps {
   schedules: Schedule[];
@@ -14,14 +16,12 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
   onShowMessage,
   onRefreshSchedules
 }) => {
-  const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
-  );
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const filteredSchedules = useMemo(() => {
     return schedules.filter(schedule => {
-      const scheduleDate = new Date(schedule.departure_time).toISOString().split('T')[0];
-      return scheduleDate === selectedDate;
+      const scheduleDate = new Date(schedule.departure_time);
+      return scheduleDate.toDateString() === selectedDate.toDateString();
     });
   }, [schedules, selectedDate]);
 
@@ -47,17 +47,17 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
           </h3>
           <div className="flex items-center space-x-2">
             <Calendar size={16} />
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            <DatePicker
+              selected={selectedDate}
+              onChange={(date) => setSelectedDate(date || new Date())}
+              dateFormat="MMM d, yyyy"
+              className="input-small"
             />
           </div>
         </div>
 
         <div className="mb-4 text-sm text-gray-600">
-          Showing schedules for: <span className="font-medium">{new Date(selectedDate).toLocaleDateString()}</span>
+          Showing schedules for: <span className="font-medium">{selectedDate.toLocaleDateString()}</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -105,7 +105,7 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
             <div className="text-center py-8 text-gray-500">
               {schedules.length === 0 
                 ? "No schedules found. Assign flights to crew members to view them."
-                : `No schedules found for ${new Date(selectedDate).toLocaleDateString()}. Try selecting a different date.`
+                : `No schedules found for ${selectedDate.toLocaleDateString()}. Try selecting a different date.`
               }
             </div>
           )}

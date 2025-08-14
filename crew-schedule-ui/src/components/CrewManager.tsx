@@ -25,6 +25,7 @@ const CrewManager: React.FC<CrewManagerProps> = ({
   const [isCreating, setIsCreating] = useState(false);
   const [editingCrew, setEditingCrew] = useState<CrewMember | null>(null);
   const [editForm, setEditForm] = useState<UpdateCrewMember>({});
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
 
   const createCrew = async (): Promise<void> => {
     if (!newCrew.name.trim()) {
@@ -109,33 +110,71 @@ const CrewManager: React.FC<CrewManagerProps> = ({
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
+        <h3 className="heading-mb">
           <Plus className="mr-2" size={20} />
           Add New Crew Member
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input
-            type="text"
-            placeholder="Full Name"
-            value={newCrew.name}
-            onChange={(e) => setNewCrew({ ...newCrew, name: e.target.value })}
-            className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            required
-          />
-          <select
-            value={newCrew.role}
-            onChange={(e) => setNewCrew({ ...newCrew, role: e.target.value as 'Pilot' | 'Flight attendant' })}
-            className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            required
-          >
-            <option value="Pilot">Pilot</option>
-            <option value="Flight attendant">Flight Attendant</option>
-          </select>
+          <div>
+            <label className="block text-sm font-medium mb-2">Full Name</label>
+            <input
+              type="text"
+              placeholder="Enter crew member name"
+              value={newCrew.name}
+              onChange={(e) => setNewCrew({ ...newCrew, name: e.target.value })}
+              className="input-field"
+              required
+            />
+          </div>
+          <div className="relative">
+            <label className="block text-sm font-medium mb-2">Select Role</label>
+            <input
+              type="text"
+              value={newCrew.role}
+              onChange={() => {}}
+              onFocus={() => setShowRoleDropdown(true)}
+              onBlur={() => {
+                setTimeout(() => {
+                  setShowRoleDropdown(false);
+                }, 200);
+              }}
+              placeholder="Choose role..."
+              className="input-field"
+              readOnly
+            />
+            {showRoleDropdown && (
+              <div className="dropdown-container">
+                <div
+                  onMouseDown={() => {
+                    setNewCrew({ ...newCrew, role: 'Pilot' });
+                    setShowRoleDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">Pilot</div>
+                  <div className="text-sm">Aircraft pilot</div>
+                </div>
+                <div
+                  onMouseDown={() => {
+                    setNewCrew({ ...newCrew, role: 'Flight attendant' });
+                    setShowRoleDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">Flight Attendant</div>
+                  <div className="text-sm">Cabin crew member</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex space-x-4 mt-4">
           <button
             onClick={createCrew}
             disabled={loading || isCreating}
-            className="md:col-span-2 bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
+            className="btn-assign"
           >
+            <Plus className="mr-2" size={16} />
             {isCreating ? 'Adding...' : 'Add Crew Member'}
           </button>
         </div>
@@ -143,7 +182,7 @@ const CrewManager: React.FC<CrewManagerProps> = ({
 
       <div className="bg-white p-6 rounded-lg shadow-md">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold flex items-center">
+          <h3 className="heading">
             <Users className="mr-2" size={20} />
             Crew Members ({crewMembers.length})
           </h3>
@@ -216,13 +255,13 @@ const CrewManager: React.FC<CrewManagerProps> = ({
                         <>
                           <button
                             onClick={saveEdit}
-                            className="text-green-600 hover:text-green-800 px-2 py-1 text-xs"
+                            className="btn-text-green"
                           >
                             Save
                           </button>
                           <button
                             onClick={cancelEdit}
-                            className="text-gray-600 hover:text-gray-800 px-2 py-1 text-xs"
+                            className="btn-text-gray"
                           >
                             Cancel
                           </button>
