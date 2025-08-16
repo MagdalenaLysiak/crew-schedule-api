@@ -14,7 +14,7 @@ router = APIRouter()
 business_rules = BusinessRules()
 
 
-@router.post("/crew", response_model=schemas.CrewMemberRead)
+@router.post("/crew", response_model=schemas.CrewMemberRead, status_code=201)
 def create_crew(crew: schemas.CrewMemberCreate, db: Session = Depends(get_db), logger: LoggerService = Depends(get_logger_service)):
     db_crew = models.CrewMember(**crew.dict())
     db.add(db_crew)
@@ -260,3 +260,23 @@ def delete_flight(flight_id: int, db: Session = Depends(get_db)):
     db.delete(flight)
     db.commit()
     return {"message": f"Flight {flight_id} and related schedules/assignments deleted."}
+
+
+@router.delete("/flights")
+def delete_all_flights(db: Session = Depends(get_db), logger: LoggerService = Depends(get_logger_service)):
+    try:
+        assignments_deleted = db.query(models.FlightAssignment).delete()
+
+        flights_deleted = db.query(models.Flight).delete()
+
+        db.commit()
+
+        logger.info(f"Deleted {flights_deleted} flights and {assignments_deleted} assignments from database")
+
+        return {
+            "message": f"Successfully deleted {flights_deleted} flights and {assignments_deleted} assignments from database"
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting all flights: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete flights: {str(e)}")

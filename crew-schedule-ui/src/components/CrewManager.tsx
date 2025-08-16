@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, Users, Eye, Trash2, Edit } from 'lucide-react';
 import { CrewMember, NewCrewMember, UpdateCrewMember, Message } from '../types';
 import { ApiService } from '../services/apiService';
@@ -25,6 +25,23 @@ const CrewManager: React.FC<CrewManagerProps> = ({
   const [isCreating, setIsCreating] = useState(false);
   const [editingCrew, setEditingCrew] = useState<CrewMember | null>(null);
   const [editForm, setEditForm] = useState<UpdateCrewMember>({});
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  const [showFilterRoleDropdown, setShowFilterRoleDropdown] = useState(false);
+  const [nameFilter, setNameFilter] = useState<string>('');
+  const [roleFilter, setRoleFilter] = useState<string>('');
+  const [availabilityFilter, setAvailabilityFilter] = useState<string>('');
+  const [showAvailabilityDropdown, setShowAvailabilityDropdown] = useState(false);
+
+  const filteredCrewMembers = useMemo(() => {
+    return crewMembers.filter((crew) => {
+      const nameMatch = !nameFilter || crew.name.toLowerCase().includes(nameFilter.toLowerCase());
+      const roleMatch = !roleFilter || crew.role === roleFilter;
+      const availabilityMatch = !availabilityFilter || 
+        (availabilityFilter === 'available' && !crew.is_on_leave) ||
+        (availabilityFilter === 'on-leave' && crew.is_on_leave);
+      return nameMatch && roleMatch && availabilityMatch;
+    });
+  }, [crewMembers, nameFilter, roleFilter, availabilityFilter]);
 
   const createCrew = async (): Promise<void> => {
     if (!newCrew.name.trim()) {
@@ -107,74 +124,241 @@ const CrewManager: React.FC<CrewManagerProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
+    <div className="space-y-4">
+      <div className="card">
+        <h3 className="heading-mb">
           <Plus className="mr-2" size={20} />
           Add New Crew Member
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input
-            type="text"
-            placeholder="Full Name"
-            value={newCrew.name}
-            onChange={(e) => setNewCrew({ ...newCrew, name: e.target.value })}
-            className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            required
-          />
-          <select
-            value={newCrew.role}
-            onChange={(e) => setNewCrew({ ...newCrew, role: e.target.value as 'Pilot' | 'Flight attendant' })}
-            className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            required
-          >
-            <option value="Pilot">Pilot</option>
-            <option value="Flight attendant">Flight Attendant</option>
-          </select>
+        <div className="form-grid">
+          <div>
+            <label className="label">Full Name</label>
+            <input
+              type="text"
+              placeholder="Enter crew member name"
+              value={newCrew.name}
+              onChange={(e) => setNewCrew({ ...newCrew, name: e.target.value })}
+              className="input-field"
+              required
+            />
+          </div>
+          <div className="relative">
+            <label className="label">Select Role</label>
+            <input
+              type="text"
+              value={newCrew.role}
+              onChange={() => {}}
+              onFocus={() => setShowRoleDropdown(true)}
+              onBlur={() => {
+                setTimeout(() => {
+                  setShowRoleDropdown(false);
+                }, 200);
+              }}
+              placeholder="Choose role..."
+              className="input-field"
+              readOnly
+            />
+            {showRoleDropdown && (
+              <div className="dropdown-container">
+                <div
+                  onMouseDown={() => {
+                    setNewCrew({ ...newCrew, role: 'Pilot' });
+                    setShowRoleDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">Pilot</div>
+                  <div className="text-sm">Aircraft pilot</div>
+                </div>
+                <div
+                  onMouseDown={() => {
+                    setNewCrew({ ...newCrew, role: 'Flight attendant' });
+                    setShowRoleDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">Flight Attendant</div>
+                  <div className="text-sm">Cabin crew member</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="button-group mt-4">
           <button
             onClick={createCrew}
             disabled={loading || isCreating}
-            className="md:col-span-2 bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
+            className="btn-assign"
           >
+            <Plus className="mr-2" size={16} />
             {isCreating ? 'Adding...' : 'Add Crew Member'}
           </button>
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold flex items-center">
-            <Users className="mr-2" size={20} />
-            Crew Members ({crewMembers.length})
-          </h3>
+      <div className="card">
+        <h3 className="section-title">Crew Members ({filteredCrewMembers.length} of {crewMembers.length})</h3>
+        <div className="filter-container">
+          <div>
+            <label className="label">Filter by Name</label>
+            <input
+              type="text"
+              value={nameFilter}
+              onChange={(e) => setNameFilter(e.target.value)}
+              placeholder="Search by name..."
+              className="input-small"
+            />
+          </div>
+          <div className="relative">
+            <label className="label">Filter by Role</label>
+            <input
+              type="text"
+              value={roleFilter ? (roleFilter === 'Pilot' ? 'Pilot' : 'Flight Attendant') : ''}
+              onChange={() => {}}
+              onFocus={() => setShowFilterRoleDropdown(true)}
+              onBlur={() => {
+                setTimeout(() => {
+                  setShowFilterRoleDropdown(false);
+                }, 200);
+              }}
+              placeholder="All Roles"
+              className="input-small"
+              readOnly
+            />
+            {showFilterRoleDropdown && (
+              <div className="dropdown-container">
+                <div
+                  onMouseDown={() => {
+                    setRoleFilter('');
+                    setShowFilterRoleDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">All Roles</div>
+                  <div className="text-sm">Show all crew members</div>
+                </div>
+                <div
+                  onMouseDown={() => {
+                    setRoleFilter('Pilot');
+                    setShowFilterRoleDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">Pilot</div>
+                  <div className="text-sm">Aircraft pilots only</div>
+                </div>
+                <div
+                  onMouseDown={() => {
+                    setRoleFilter('Flight attendant');
+                    setShowFilterRoleDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">Flight Attendant</div>
+                  <div className="text-sm">Cabin crew only</div>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="relative">
+            <label className="label">Filter by Availability</label>
+            <input
+              type="text"
+              value={availabilityFilter ? (availabilityFilter === 'available' ? 'Available' : 'On Leave') : ''}
+              onChange={() => {}}
+              onFocus={() => setShowAvailabilityDropdown(true)}
+              onBlur={() => {
+                setTimeout(() => {
+                  setShowAvailabilityDropdown(false);
+                }, 200);
+              }}
+              placeholder="All Status"
+              className="input-small"
+              readOnly
+            />
+            {showAvailabilityDropdown && (
+              <div className="dropdown-container">
+                <div
+                  onMouseDown={() => {
+                    setAvailabilityFilter('');
+                    setShowAvailabilityDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">All Status</div>
+                  <div className="text-sm">Show all crew members</div>
+                </div>
+                <div
+                  onMouseDown={() => {
+                    setAvailabilityFilter('available');
+                    setShowAvailabilityDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">Available</div>
+                  <div className="text-sm">Available crew only</div>
+                </div>
+                <div
+                  onMouseDown={() => {
+                    setAvailabilityFilter('on-leave');
+                    setShowAvailabilityDropdown(false);
+                  }}
+                  className="dropdown-sug"
+                >
+                  <div className="font-medium">On Leave</div>
+                  <div className="text-sm">Crew on leave only</div>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="sm:col-span-3">
+            <button
+              onClick={() => {
+                setNameFilter('');
+                setRoleFilter('');
+                setAvailabilityFilter('');
+              }}
+              className="btn-secondary-sm"
+            >
+              Clear Filters
+            </button>
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full table-auto">
+        <div className="table-container">
+          <table className="w-full table-fixed">
             <thead>
-              <tr className="border-b">
-                <th className="text-left p-3">Name</th>
-                <th className="text-left p-3">Role</th>
-                <th className="text-left p-3">Status</th>
-                <th className="text-left p-3">Actions</th>
+              <tr className="table-header-row">
+                <th className="table-header">Name</th>
+                <th className="table-header-hidden">Role</th>
+                <th className="table-header-hidden">Status</th>
+                <th className="table-header">Actions</th>
               </tr>
             </thead>
+          </table>
+          <div className="scrollable-container">
+            <table className="w-full table-fixed">
             <tbody>
-              {crewMembers.map((crew) => (
-                <tr key={crew.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3 font-medium">
-                    {editingCrew?.id === crew.id ? (
-                      <input
-                        type="text"
-                        value={editForm.name || ''}
-                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                        className="p-1 border rounded w-full"
-                      />
-                    ) : (
-                      crew.name
-                    )}
+              {filteredCrewMembers.map((crew) => (
+                <tr key={crew.id} className="table-row">
+                  <td className="table-cell">
+                    <div className="font-medium">
+                      {editingCrew?.id === crew.id ? (
+                        <input
+                          type="text"
+                          value={editForm.name || ''}
+                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                          className="p-1 border rounded w-full"
+                        />
+                      ) : (
+                        crew.name
+                      )}
+                    </div>
+                    <div className="mobile-info-centered">
+                      {crew.role} • {crew.is_on_leave ? 'On Leave' : 'Available'}
+                    </div>
                   </td>
-                  <td className="p-3">
+                  <td className="table-cell-hidden">
                     {editingCrew?.id === crew.id ? (
                       <select
                         value={editForm.role || crew.role}
@@ -192,7 +376,7 @@ const CrewManager: React.FC<CrewManagerProps> = ({
                       </span>
                     )}
                   </td>
-                  <td className="p-3">
+                  <td className="table-cell-hidden">
                     {editingCrew?.id === crew.id ? (
                       <select
                         value={editForm.is_on_leave !== undefined ? editForm.is_on_leave.toString() : crew.is_on_leave.toString()}
@@ -210,45 +394,23 @@ const CrewManager: React.FC<CrewManagerProps> = ({
                       </span>
                     )}
                   </td>
-                  <td className="p-3">
-                    <div className="flex space-x-2">
+                  <td className="table-cell">
+                    <div className="flex flex-wrap gap-1 justify-center">
                       {editingCrew?.id === crew.id ? (
                         <>
-                          <button
-                            onClick={saveEdit}
-                            className="text-green-600 hover:text-green-800 px-2 py-1 text-xs"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="text-gray-600 hover:text-gray-800 px-2 py-1 text-xs"
-                          >
-                            Cancel
-                          </button>
+                          <button onClick={saveEdit} className="text-green-600 text-xs px-2 py-1">Save</button>
+                          <button onClick={cancelEdit} className="text-gray-600 text-xs px-2 py-1">Cancel</button>
                         </>
                       ) : (
                         <>
-                          <button
-                            onClick={() => viewCrewSchedule(crew.id)}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="View Schedule"
-                          >
-                            <Eye size={16} />
+                          <button onClick={() => viewCrewSchedule(crew.id)} className="text-blue-600 dark:text-blue-400 p-1" title="View">
+                            <Eye size={18} className="sm:w-4 sm:h-4" />
                           </button>
-                          <button
-                            onClick={() => startEdit(crew)}
-                            className="text-yellow-600 hover:text-yellow-800"
-                            title="Edit"
-                          >
-                            <Edit size={16} />
+                          <button onClick={() => startEdit(crew)} className="text-yellow-600 dark:text-yellow-400 p-1" title="Edit">
+                            <Edit size={18} className="sm:w-4 sm:h-4" />
                           </button>
-                          <button
-                            onClick={() => deleteCrew(crew.id)}
-                            className="text-red-600 hover:text-red-800"
-                            title="Delete"
-                          >
-                            <Trash2 size={16} />
+                          <button onClick={() => deleteCrew(crew.id)} className="text-red-600 dark:text-red-400 p-1" title="Delete">
+                            <Trash2 size={18} className="sm:w-4 sm:h-4" />
                           </button>
                         </>
                       )}
@@ -257,12 +419,13 @@ const CrewManager: React.FC<CrewManagerProps> = ({
                 </tr>
               ))}
             </tbody>
-          </table>
-          {crewMembers.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No crew members found. Add crew members to get started.
-            </div>
-          )}
+            </table>
+            {filteredCrewMembers.length === 0 && (
+              <div className="text-empty">
+                {crewMembers.length === 0 ? 'No crew members found. Add crew members to get started.' : 'No crew members match the selected filters.'}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

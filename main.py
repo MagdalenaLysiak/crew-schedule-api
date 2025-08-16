@@ -12,7 +12,12 @@ for var in required_env_vars:
     if not os.getenv(var):
         raise ValueError(f"Required environment variable {var} is not set")
 
-app = FastAPI()
+app = FastAPI(
+    title="Flight Crew Management API",
+    description="Crew scheduling system for Luton Airport",
+    version="1.0.0"
+)
+
 
 @app.get("/")
 def read_root():

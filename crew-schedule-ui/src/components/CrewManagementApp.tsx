@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Users, Plane } from 'lucide-react';
+import { Users, Plane, BookOpen, Moon, Sun } from 'lucide-react';
 import { CrewMember, Flight, Schedule, Message } from '../types';
 import { ApiService } from '../services/apiService';
 import CrewManager from './CrewManager';
@@ -22,11 +22,13 @@ const CrewManagementApp: React.FC = () => {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<Message>({ type: '', text: '' });
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const tabs: TabConfig[] = [
     { id: 'crew', label: 'Crew Management', icon: Users },
     { id: 'assignments', label: 'Flight Assignments', icon: Plane },
-    { id: 'schedules', label: 'Schedule Overview', icon: Calendar }
+    { id: 'schedules', label: 'Schedule Overview', icon: BookOpen }
   ];
 
   const fetchCrewMembers = async (): Promise<void> => {
@@ -105,6 +107,8 @@ const CrewManagementApp: React.FC = () => {
         return (
           <ScheduleOverview
             schedules={schedules}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
             onShowMessage={showMessage}
             onRefreshSchedules={fetchSchedules}
           />
@@ -115,39 +119,53 @@ const CrewManagementApp: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <Plane className="h-8 w-8 text-blue-600 mr-3" />
-              <h1 className="text-2xl font-bold text-gray-900">Flight Crew Management</h1>
+    <div className={`min-h-screen ${isDarkMode ? 'dark bg-gray-900' : 'bg-gray-100'}`}>
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
+        <div className="app-container">
+          <div className="app-header">
+            <div className="header-brand">
+              <Plane className="brand-icon" />
+              <div>
+                <h1 className="brand-title dark:text-white">Flight Crew Management</h1>
+                <div className="text-slogan">
+                  Your easy scheduling app!
+                </div>
+              </div>
             </div>
-            <div className="text-sm text-gray-500">
-              Your easy scheduling app!
+            <div className="flex items-center gap-4">
+              <div className="brand-tagline dark:text-gray-400">
+                Your easy scheduling app!
+              </div>
+              <button
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="btn-icon-hover"
+                title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                {isDarkMode ? <Sun size={20} className="text-yellow-500" /> : <Moon size={20} className="text-blue-800" />}
+              </button>
             </div>
           </div>
 
-          <nav className="flex space-x-8">
+          <nav className="nav-container" data-active={tabs.findIndex(tab => tab.id === activeTab)}>
             {tabs.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
-                className={`flex items-center px-1 py-4 border-b-2 font-medium text-sm ${
+                className={`nav-tab ${
                   activeTab === id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'text-blue'
+                    : 'text-gray-500 dark:text-gray-400'
                 }`}
               >
-                <Icon className="mr-2" size={16} />
-                {label}
+                <Icon className="sm:mr-2" size={16} />
+                <span className="mt-1 sm:mt-0">{label.split(' ')[0]}<span className="hidden sm:inline"> {label.split(' ').slice(1).join(' ')}</span></span>
               </button>
             ))}
           </nav>
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <main className="app-container py-4">
         <MessageBanner message={message} />
         {renderActiveTab()}
       </main>
