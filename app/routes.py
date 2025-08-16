@@ -229,13 +229,14 @@ def get_all_flights(db: Session = Depends(get_db)):
 @router.post("/load-flights")
 def load_flights(db: Session = Depends(get_db), flight_date: str = None, logger: LoggerService = Depends(get_logger_service)):
     try:
-        store_luton_flights(db, flight_date)
+        store_luton_flights(db, None)
         total_flights = db.query(models.Flight).count()
-        logger.info(f"Loaded flights for {flight_date or 'today'}. Total flights: {total_flights}")
+        today = datetime.now().strftime('%Y-%m-%d')
+        logger.info(f"Loaded flights for today ({today}). Total flights: {total_flights}")
 
         return {
-            "message": f"Flights loaded successfully. Total flights in database: {total_flights}",
-            "date": flight_date or "today"
+            "message": f"Flights loaded successfully for today ({today}). Total flights in database: {total_flights}",
+            "date": today
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load flights: {str(e)}")

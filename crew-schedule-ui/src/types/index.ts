@@ -23,6 +23,8 @@ export interface Flight {
   destination: string;
   departure_time: string;
   arrival_time: string;
+  scheduled_departure_time: string;
+  scheduled_arrival_time: string;
   duration_text: string;
   direction: 'departure' | 'arrival';
 }
@@ -35,6 +37,8 @@ export interface Schedule {
   flight_number: string;
   departure_time: string;
   arrival_time: string;
+  scheduled_departure_time: string;
+  scheduled_arrival_time: string;
   origin: string;
   destination: string;
   duration_text: string;

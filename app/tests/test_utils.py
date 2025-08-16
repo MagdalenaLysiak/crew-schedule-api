@@ -113,6 +113,102 @@ class TestTimezoneCalculations:
         assert result.minutes == 0
         assert result.text == "0h 0m"
 
+    def test_short_flight_brussels_to_luton(self):
+        # Brussels 05:25 GMT+2 - Luton 04:26 GMT+1
+        # should be 1h 1m
+        dep_time = datetime(2024, 1, 15, 5, 25)
+        arr_time = datetime(2024, 1, 15, 4, 26)
+
+        result = calculate_timezone_adjusted_duration(
+            dep_time, arr_time, "GMT+2", "GMT+1"
+        )
+
+        assert result.minutes == 61
+        assert result.text == "1h 1m"
+
+    def test_short_flight_paris_to_luton(self):
+        # Paris 21:10 GMT+2 - Luton 20:25 GMT+1
+        # should be 1h 15m
+        dep_time = datetime(2024, 8, 14, 21, 10)
+        arr_time = datetime(2024, 8, 14, 20, 25)
+
+        result = calculate_timezone_adjusted_duration(
+            dep_time, arr_time, "GMT+2", "GMT+1"
+        )
+
+        assert result.minutes == 75
+        assert result.text == "1h 15m"
+
+    def test_short_flight_luton_to_berlin(self):
+        # Luton 06:00 GMT+1 - Berlin 07:30 GMT+2
+        # should be 1h 30m
+        dep_time = datetime(2024, 1, 15, 6, 0)
+        arr_time = datetime(2024, 1, 15, 7, 30)
+
+        result = calculate_timezone_adjusted_duration(
+            dep_time, arr_time, "GMT+1", "GMT+2"
+        )
+
+        assert result.minutes == 90
+        assert result.text == "1h 30m"
+
+    def test_luton_to_romania_flight(self):
+        # Luton 09:00 GMT+1 - Romania 13:45 GMT+3
+        # Should be 2h 45m
+        dep_time = datetime(2024, 8, 16, 9, 0)
+        arr_time = datetime(2024, 8, 16, 13, 45)
+
+        result = calculate_timezone_adjusted_duration(
+            dep_time, arr_time, "GMT+1", "GMT+3"
+        )
+
+        assert result.minutes == 165
+        assert result.text == "2h 45m"
+
+    def test_luton_to_warsaw_flight(self):
+        # Luton 10:00 GMT+1 - Warsaw 13:00 GMT+2
+        # Should be 2h 0m
+        dep_time = datetime(2024, 8, 16, 10, 0)
+        arr_time = datetime(2024, 8, 16, 13, 0)
+
+        result = calculate_timezone_adjusted_duration(
+            dep_time, arr_time, "GMT+1", "GMT+2"
+        )
+
+        assert result.minutes == 120
+        assert result.text == "2h 0m"
+
+    def test_get_gmt_offset_from_country(self):
+        from app.utils import get_gmt_offset_from_country
+
+        poland_offset = get_gmt_offset_from_country("Poland")
+        assert poland_offset in ["GMT+1", "GMT+2"]
+
+        uk_offset = get_gmt_offset_from_country("United Kingdom")
+        assert uk_offset in ["GMT+0", "GMT+1"]
+
+        romania_offset = get_gmt_offset_from_country("Romania")
+        assert romania_offset in ["GMT+2", "GMT+3"]
+
+        unknown_offset = get_gmt_offset_from_country("Unknown Country")
+        assert unknown_offset == "GMT+0"
+
+    def test_get_timezone_from_iata(self):
+        from app.utils import get_timezone_from_iata
+        from unittest.mock import patch
+
+        with patch('app.utils.get_airport_country') as mock_get_country:
+            mock_get_country.return_value = "Poland"
+
+            result = get_timezone_from_iata("LUZ")
+            assert result in ["GMT+1", "GMT+2"]
+
+        with patch('app.utils.get_airport_country') as mock_get_country:
+            mock_get_country.return_value = ""
+
+            result = get_timezone_from_iata("XXX")
+            assert result == "GMT+0"
+
 
 if __name__ == "__main__":
     pytest.main([__file__ + "::TestLutonFlightSequence::test_duplicate_luton_departure_blocked", "-v"])

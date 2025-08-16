@@ -28,14 +28,14 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
 
   const filteredSchedules = useMemo(() => {
     return schedules.filter(schedule => {
-      const scheduleDate = new Date(schedule.departure_time);
+      const scheduleDate = new Date(schedule.scheduled_departure_time);
       const dateMatch = scheduleDate.toDateString() === selectedDate.toDateString();
       const crewMatch = !crewFilter || schedule.crew_name.toLowerCase().includes(crewFilter.toLowerCase());
       const flightMatch = !flightFilter || schedule.flight_number.toLowerCase().includes(flightFilter.toLowerCase());
       const timeMatch = !timeFilter || (
-        timeFilter === 'am' && new Date(schedule.departure_time).getHours() < 12
+        timeFilter === 'am' && new Date(schedule.scheduled_departure_time).getHours() < 12
       ) || (
-        timeFilter === 'pm' && new Date(schedule.departure_time).getHours() >= 12
+        timeFilter === 'pm' && new Date(schedule.scheduled_departure_time).getHours() >= 12
       );
       return dateMatch && crewMatch && flightMatch && timeMatch;
     });
@@ -196,7 +196,7 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
                     <div className="mobile-info">
                       {schedule.flight_number} • {schedule.origin} → {schedule.destination}<br/>
                       <Clock size={14} className="icon-inline" />
-                      {new Date(schedule.departure_time).toLocaleTimeString()} → {new Date(schedule.arrival_time).toLocaleTimeString()}<br/>
+                      {new Date(schedule.scheduled_departure_time).toLocaleTimeString()} → {new Date(schedule.scheduled_arrival_time).toLocaleTimeString()}<br/>
                       {schedule.duration_text}
                     </div>
                   </td>
@@ -204,7 +204,7 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
                   <td className="table-cell-hidden text-sm">
                     <div className="flex items-center">
                       <Clock size={14} className="mr-1" />
-                      {new Date(schedule.departure_time).toLocaleTimeString()} → {new Date(schedule.arrival_time).toLocaleTimeString()}
+                      {new Date(schedule.scheduled_departure_time).toLocaleTimeString()} → {new Date(schedule.scheduled_arrival_time).toLocaleTimeString()}
                     </div>
                   </td>
                   <td className="table-cell-hidden">{schedule.origin} → {schedule.destination}</td>
