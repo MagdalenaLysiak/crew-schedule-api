@@ -14,6 +14,8 @@ class Flight(Base):
     duration_text = Column(String(20), nullable=True)
     departure_time = Column(DateTime, nullable=True)
     arrival_time = Column(DateTime, nullable=True)
+    scheduled_departure_time = Column(DateTime, nullable=True)
+    scheduled_arrival_time = Column(DateTime, nullable=True)
     origin_timezone = Column(String(50), nullable=True)
     destination_timezone = Column(String(50), nullable=True)
     origin_gmt_offset = Column(String(10), nullable=True)

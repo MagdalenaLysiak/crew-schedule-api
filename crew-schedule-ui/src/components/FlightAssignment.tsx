@@ -103,7 +103,7 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
   };
 
   const filteredFlights = flights.filter((flight) => {
-    const flightDate = new Date(flight.departure_time);
+    const flightDate = new Date(flight.scheduled_departure_time);
     const dateMatch = !filterDate || flightDate.toDateString() === filterDate.toDateString();
     const directionMatch = !filterDirection || flight.direction === filterDirection;
     return dateMatch && directionMatch;
@@ -398,8 +398,8 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
                   </div>
                 ) : (
                   filteredFlights.map((flight) => {
-                    const dep = new Date(flight.departure_time);
-                    const arr = new Date(flight.arrival_time);
+                    const dep = new Date(flight.scheduled_departure_time);
+                    const arr = new Date(flight.scheduled_arrival_time);
                     const dateStr = dep.toLocaleDateString();
                     return (
                       <tr key={flight.id} className="table-row">
