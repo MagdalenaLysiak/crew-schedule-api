@@ -70,6 +70,14 @@
     @apply border-b hover:bg-gray-50 dark:hover:bg-gray-600;
   }
   
+  .editing-row {
+    @apply border-b;
+  }
+  
+  .editing-row:hover {
+    @apply bg-transparent dark:bg-transparent;
+  }
+  
   .text-blue {
     @apply text-blue-600 dark:text-blue-400;
   }
@@ -176,11 +184,11 @@
   }
   
   .btn-text-green {
-    @apply text-green-600 hover:text-green-800 px-2 py-1 text-xs;
+    @apply text-green-600 hover:text-green-800 px-2 py-1 text-sm sm:text-xs;
   }
   
   .btn-text-gray {
-    @apply text-gray-600 hover:text-gray-800 px-2 py-1 text-xs;
+    @apply text-gray-600 hover:text-gray-800 px-2 py-1 text-sm sm:text-xs;
   }
 
   /* inputs */
@@ -226,7 +234,7 @@
   
   .dark .scrollable-container::-webkit-scrollbar-track,
   .dark .flight-scrollable-container::-webkit-scrollbar-track {
-    background: #374151;
+    background: #4b5563;
   }
   
   .dark .scrollable-container::-webkit-scrollbar-thumb,
@@ -255,6 +263,10 @@
   
   .table-cell-hidden {
     @apply p-2 sm:p-3 hidden sm:table-cell text-center;
+  }
+  
+  .table-cell-left {
+    @apply p-2 sm:p-3 hidden sm:table-cell text-left;
   }
   
   .filter-container {

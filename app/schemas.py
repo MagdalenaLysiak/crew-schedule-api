@@ -19,12 +19,16 @@ class FlightBase(BaseModel):
 class FlightCreate(FlightBase):
     departure_time: Optional[datetime] = None
     arrival_time: Optional[datetime] = None
+    scheduled_departure_time: Optional[datetime] = None
+    scheduled_arrival_time: Optional[datetime] = None
 
 
 class FlightRead(FlightBase):
     id: int
     departure_time: Optional[datetime] = None
     arrival_time: Optional[datetime] = None
+    scheduled_departure_time: Optional[datetime] = None
+    scheduled_arrival_time: Optional[datetime] = None
 
     @computed_field
     @property
@@ -94,6 +98,8 @@ class FlightSimple(BaseModel):
     direction: Optional[str] = None
     departure_time: Optional[datetime] = None
     arrival_time: Optional[datetime] = None
+    scheduled_departure_time: Optional[datetime] = None
+    scheduled_arrival_time: Optional[datetime] = None
     duration_text: Optional[str] = None
 
     class Config:

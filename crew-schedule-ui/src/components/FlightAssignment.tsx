@@ -22,6 +22,7 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
   onRefreshFlights,
   onRefreshSchedules
 }) => {
+  const [schedules, setSchedules] = useState<any[]>([]);
   const [selectedCrew, setSelectedCrew] = useState<string>('');
   const [selectedFlight, setSelectedFlight] = useState<string>('');
   const [flightSearch, setFlightSearch] = useState<string>('');
@@ -35,6 +36,32 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
   const [filterDirection, setFilterDirection] = useState<string>('');
   const [showDirectionDropdown, setShowDirectionDropdown] = useState(false);
   const [isRemovingFlights, setIsRemovingFlights] = useState(false);
+
+  const fetchSchedules = async () => {
+    try {
+      const data = await ApiService.getSchedules();
+      setSchedules(data);
+    } catch (error) {
+      console.error('Error fetching schedules:', error);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchSchedules();
+  }, []);
+
+  const getCrewCounts = (flightId: number) => {
+    const flightSchedules = schedules.filter(s => s.flight_id === flightId);
+    const pilots = flightSchedules.filter(s => {
+      const crew = crewMembers.find(c => c.id === s.crew_id);
+      return crew?.role === 'Pilot';
+    }).length;
+    const attendants = flightSchedules.filter(s => {
+      const crew = crewMembers.find(c => c.id === s.crew_id);
+      return crew?.role === 'Flight attendant';
+    }).length;
+    return { pilots, attendants };
+  };
 
   const checkAvailability = async (): Promise<void> => {
     if (!selectedCrew || !selectedFlight) return;
@@ -63,6 +90,7 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
       );
       onShowMessage('success', data.message);
       onRefreshSchedules();
+      fetchSchedules();
       setAvailabilityCheck(null);
       setSelectedCrew('');
       setSelectedFlight('');
@@ -93,6 +121,7 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
       onShowMessage('success', data.message);
       onRefreshFlights();
       onRefreshSchedules();
+      fetchSchedules();
       setSelectedFlight('');
       setFlightSearch('');
       setAvailabilityCheck(null);
@@ -103,7 +132,7 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
   };
 
   const filteredFlights = flights.filter((flight) => {
-    const flightDate = new Date(flight.departure_time);
+    const flightDate = new Date(flight.scheduled_departure_time);
     const dateMatch = !filterDate || flightDate.toDateString() === filterDate.toDateString();
     const directionMatch = !filterDirection || flight.direction === filterDirection;
     return dateMatch && directionMatch;
@@ -383,24 +412,26 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
                 <th className="table-header">Flight</th>
                 <th className="table-header-hidden">Route</th>
                 <th className="table-header-hidden">Date</th>
-                <th className="table-header-hidden">Times</th>
+                <th className="table-header-hidden">Local Times</th>
                 <th className="table-header-hidden">Duration</th>
+                <th className="table-header-hidden">Crew</th>
                 <th className="table-header-hidden">Direction</th>
               </tr>
             </thead>
           </table>
           <div className="flight-scrollable-container">
             <table className="w-full table-fixed">
-              <tbody>
+            <tbody>
                 {filteredFlights.length === 0 ? (
                   <div className="text-empty">
                       {flights.length === 0 ? 'No flights available' : 'No flights match the selected filters'}
                   </div>
                 ) : (
                   filteredFlights.map((flight) => {
-                    const dep = new Date(flight.departure_time);
-                    const arr = new Date(flight.arrival_time);
+                    const dep = new Date(flight.scheduled_departure_time);
+                    const arr = new Date(flight.scheduled_arrival_time);
                     const dateStr = dep.toLocaleDateString();
+                    const { pilots, attendants } = getCrewCounts(flight.id);
                     return (
                       <tr key={flight.id} className="table-row">
                         <td className="table-cell">
@@ -409,6 +440,7 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
                             {flight.origin} → {flight.destination}<br/>
                             {dateStr} • {flight.duration_text}<br/>
                             Dep: {dep.toLocaleTimeString()} Arr: {arr.toLocaleTimeString()}<br/>
+                            Pilots: {pilots}/2 • Attendants: {attendants}/4<br/>
                             <span className={`px-1 py-0.5 rounded text-xs ${
                               flight.direction === 'departure' 
                                 ? 'bg-blue-100 text-blue-800' 
@@ -425,6 +457,10 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
                           <div>Arr: {arr.toLocaleTimeString()}</div>
                         </td>
                         <td className="table-cell-hidden">{flight.duration_text}</td>
+                        <td className="table-cell-hidden text-sm">
+                          <div>Pilots: {pilots}/2</div>
+                          <div>Attendants: {attendants}/4</div>
+                        </td>
                         <td className="table-cell-hidden">
                           <span className={`px-2 py-1 rounded-full text-xs ${
                             flight.direction === 'departure' 
@@ -438,7 +474,7 @@ const FlightAssignment: React.FC<FlightAssignmentProps> = ({
                     )
                   })
                 )}
-              </tbody>
+            </tbody>
             </table>
           </div>
         </div>
