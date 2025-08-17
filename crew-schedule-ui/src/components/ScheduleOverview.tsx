@@ -28,14 +28,15 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
 
   const filteredSchedules = useMemo(() => {
     return schedules.filter(schedule => {
-      const scheduleDate = new Date(schedule.scheduled_departure_time);
+      const departureTime = schedule.scheduled_departure_time || schedule.departure_time;
+      const scheduleDate = new Date(departureTime);
       const dateMatch = scheduleDate.toDateString() === selectedDate.toDateString();
       const crewMatch = !crewFilter || schedule.crew_name.toLowerCase().includes(crewFilter.toLowerCase());
       const flightMatch = !flightFilter || schedule.flight_number.toLowerCase().includes(flightFilter.toLowerCase());
       const timeMatch = !timeFilter || (
-        timeFilter === 'am' && new Date(schedule.scheduled_departure_time).getHours() < 12
+        timeFilter === 'am' && new Date(departureTime).getHours() < 12
       ) || (
-        timeFilter === 'pm' && new Date(schedule.scheduled_departure_time).getHours() >= 12
+        timeFilter === 'pm' && new Date(departureTime).getHours() >= 12
       );
       return dateMatch && crewMatch && flightMatch && timeMatch;
     });
@@ -179,7 +180,7 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
               <tr className="table-header-row">
                 <th className="table-header">Crew Member</th>
                 <th className="table-header-hidden">Flight</th>
-                <th className="table-header-hidden">Times</th>
+                <th className="table-header-hidden">Local Times</th>
                 <th className="table-header-hidden">Route</th>
                 <th className="table-header-hidden">Duration</th>
                 <th className="table-header">Actions</th>
@@ -196,16 +197,14 @@ const ScheduleOverview: React.FC<ScheduleOverviewProps> = ({
                     <div className="mobile-info">
                       {schedule.flight_number} • {schedule.origin} → {schedule.destination}<br/>
                       <Clock size={14} className="icon-inline" />
-                      {new Date(schedule.scheduled_departure_time).toLocaleTimeString()} → {new Date(schedule.scheduled_arrival_time).toLocaleTimeString()}<br/>
+                      {new Date(schedule.scheduled_departure_time || schedule.departure_time).toLocaleTimeString()} → {new Date(schedule.scheduled_arrival_time || schedule.arrival_time).toLocaleTimeString()}<br/>
                       {schedule.duration_text}
                     </div>
                   </td>
                   <td className="table-cell-hidden font-medium">{schedule.flight_number}</td>
                   <td className="table-cell-hidden text-sm">
-                    <div className="flex items-center">
-                      <Clock size={14} className="mr-1" />
-                      {new Date(schedule.scheduled_departure_time).toLocaleTimeString()} → {new Date(schedule.scheduled_arrival_time).toLocaleTimeString()}
-                    </div>
+                    <Clock size={14} className="inline mr-1" />
+                    {new Date(schedule.scheduled_departure_time || schedule.departure_time).toLocaleTimeString()} → {new Date(schedule.scheduled_arrival_time || schedule.arrival_time).toLocaleTimeString()}
                   </td>
                   <td className="table-cell-hidden">{schedule.origin} → {schedule.destination}</td>
                   <td className="table-cell-hidden">{schedule.duration_text}</td>

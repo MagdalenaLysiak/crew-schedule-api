@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Users, Eye, Trash2, Edit } from 'lucide-react';
+import { Plus, Users, Eye, Trash2, Edit, Check, X } from 'lucide-react';
 import { CrewMember, NewCrewMember, UpdateCrewMember, Message } from '../types';
 import { ApiService } from '../services/apiService';
 
@@ -27,6 +27,8 @@ const CrewManager: React.FC<CrewManagerProps> = ({
   const [editForm, setEditForm] = useState<UpdateCrewMember>({});
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [showFilterRoleDropdown, setShowFilterRoleDropdown] = useState(false);
+  const [showEditRoleDropdown, setShowEditRoleDropdown] = useState(false);
+  const [showEditStatusDropdown, setShowEditStatusDropdown] = useState(false);
   const [nameFilter, setNameFilter] = useState<string>('');
   const [roleFilter, setRoleFilter] = useState<string>('');
   const [availabilityFilter, setAvailabilityFilter] = useState<string>('');
@@ -327,7 +329,7 @@ const CrewManager: React.FC<CrewManagerProps> = ({
 
         <div className="table-container">
           <table className="w-full table-fixed">
-            <thead>
+            <thead className="sticky top-0 z-0">
               <tr className="table-header-row">
                 <th className="table-header">Name</th>
                 <th className="table-header-hidden">Role</th>
@@ -340,7 +342,7 @@ const CrewManager: React.FC<CrewManagerProps> = ({
             <table className="w-full table-fixed">
             <tbody>
               {filteredCrewMembers.map((crew) => (
-                <tr key={crew.id} className="table-row">
+                <tr key={crew.id} className={`table-row ${editingCrew?.id === crew.id ? 'editing-row' : ''}`}>
                   <td className="table-cell">
                     <div className="font-medium">
                       {editingCrew?.id === crew.id ? (
@@ -348,26 +350,140 @@ const CrewManager: React.FC<CrewManagerProps> = ({
                           type="text"
                           value={editForm.name || ''}
                           onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                          className="p-1 border rounded w-full"
+                          className="input-field w-full"
                         />
                       ) : (
                         crew.name
                       )}
                     </div>
                     <div className="mobile-info-centered">
-                      {crew.role} • {crew.is_on_leave ? 'On Leave' : 'Available'}
+                      {editingCrew?.id === crew.id ? (
+                        <div className="space-y-2 mt-2">
+                          <div className="relative mt-2">
+                            <input
+                              type="text"
+                              value={editForm.role || crew.role}
+                              onChange={() => {}}
+                              onFocus={() => setShowEditRoleDropdown(true)}
+                              onBlur={() => {
+                                setTimeout(() => {
+                                  setShowEditRoleDropdown(false);
+                                }, 200);
+                              }}
+                              className="input-field text-sm"
+                              readOnly
+                            />
+                            {showEditRoleDropdown && (
+                              <div className="dropdown-container">
+                                <div
+                                  onMouseDown={() => {
+                                    setEditForm({ ...editForm, role: 'Pilot' });
+                                    setShowEditRoleDropdown(false);
+                                  }}
+                                  className="dropdown-sug text-left"
+                                >
+                                  <div className="font-medium">Pilot</div>
+                                  <div className="text-sm">Aircraft pilot</div>
+                                </div>
+                                <div
+                                  onMouseDown={() => {
+                                    setEditForm({ ...editForm, role: 'Flight attendant' });
+                                    setShowEditRoleDropdown(false);
+                                  }}
+                                  className="dropdown-sug text-left"
+                                >
+                                  <div className="font-medium">Flight Attendant</div>
+                                  <div className="text-sm">Cabin crew member</div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={editForm.is_on_leave !== undefined ? (editForm.is_on_leave ? 'On Leave' : 'Available') : (crew.is_on_leave ? 'On Leave' : 'Available')}
+                              onChange={() => {}}
+                              onFocus={() => setShowEditStatusDropdown(true)}
+                              onBlur={() => {
+                                setTimeout(() => {
+                                  setShowEditStatusDropdown(false);
+                                }, 200);
+                              }}
+                              className="input-field text-sm"
+                              readOnly
+                            />
+                            {showEditStatusDropdown && (
+                              <div className="dropdown-container">
+                                <div
+                                  onMouseDown={() => {
+                                    setEditForm({ ...editForm, is_on_leave: false });
+                                    setShowEditStatusDropdown(false);
+                                  }}
+                                  className="dropdown-sug text-left"
+                                >
+                                  <div className="font-medium">Available</div>
+                                  <div className="text-sm">Ready for assignments</div>
+                                </div>
+                                <div
+                                  onMouseDown={() => {
+                                    setEditForm({ ...editForm, is_on_leave: true });
+                                    setShowEditStatusDropdown(false);
+                                  }}
+                                  className="dropdown-sug text-left"
+                                >
+                                  <div className="font-medium">On Leave</div>
+                                  <div className="text-sm">Not available for assignments</div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        `${crew.role} • ${crew.is_on_leave ? 'On Leave' : 'Available'}`
+                      )}
                     </div>
                   </td>
                   <td className="table-cell-hidden">
                     {editingCrew?.id === crew.id ? (
-                      <select
-                        value={editForm.role || crew.role}
-                        onChange={(e) => setEditForm({ ...editForm, role: e.target.value as 'Pilot' | 'Flight attendant' })}
-                        className="p-1 border rounded"
-                      >
-                        <option value="Pilot">Pilot</option>
-                        <option value="Flight attendant">Flight Attendant</option>
-                      </select>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={editForm.role || crew.role}
+                          onChange={() => {}}
+                          onFocus={() => setShowEditRoleDropdown(true)}
+                          onBlur={() => {
+                            setTimeout(() => {
+                              setShowEditRoleDropdown(false);
+                            }, 200);
+                          }}
+                          className="input-field"
+                          readOnly
+                        />
+                        {showEditRoleDropdown && (
+                          <div className="dropdown-container">
+                            <div
+                              onMouseDown={() => {
+                                setEditForm({ ...editForm, role: 'Pilot' });
+                                setShowEditRoleDropdown(false);
+                              }}
+                              className="dropdown-sug text-left"
+                            >
+                              <div className="font-medium">Pilot</div>
+                              <div className="text-sm">Aircraft pilot</div>
+                            </div>
+                            <div
+                              onMouseDown={() => {
+                                setEditForm({ ...editForm, role: 'Flight attendant' });
+                                setShowEditRoleDropdown(false);
+                              }}
+                              className="dropdown-sug text-left"
+                            >
+                              <div className="font-medium">Flight Attendant</div>
+                              <div className="text-sm">Cabin crew member</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         crew.role === 'Pilot' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
@@ -378,14 +494,45 @@ const CrewManager: React.FC<CrewManagerProps> = ({
                   </td>
                   <td className="table-cell-hidden">
                     {editingCrew?.id === crew.id ? (
-                      <select
-                        value={editForm.is_on_leave !== undefined ? editForm.is_on_leave.toString() : crew.is_on_leave.toString()}
-                        onChange={(e) => setEditForm({ ...editForm, is_on_leave: e.target.value === 'true' })}
-                        className="p-1 border rounded"
-                      >
-                        <option value="false">Available</option>
-                        <option value="true">On Leave</option>
-                      </select>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={editForm.is_on_leave !== undefined ? (editForm.is_on_leave ? 'On Leave' : 'Available') : (crew.is_on_leave ? 'On Leave' : 'Available')}
+                          onChange={() => {}}
+                          onFocus={() => setShowEditStatusDropdown(true)}
+                          onBlur={() => {
+                            setTimeout(() => {
+                              setShowEditStatusDropdown(false);
+                            }, 200);
+                          }}
+                          className="input-field"
+                          readOnly
+                        />
+                        {showEditStatusDropdown && (
+                          <div className="dropdown-container">
+                            <div
+                              onMouseDown={() => {
+                                setEditForm({ ...editForm, is_on_leave: false });
+                                setShowEditStatusDropdown(false);
+                              }}
+                              className="dropdown-sug text-left"
+                            >
+                              <div className="font-medium">Available</div>
+                              <div className="text-sm">Ready for assignments</div>
+                            </div>
+                            <div
+                              onMouseDown={() => {
+                                setEditForm({ ...editForm, is_on_leave: true });
+                                setShowEditStatusDropdown(false);
+                              }}
+                              className="dropdown-sug text-left"
+                            >
+                              <div className="font-medium">On Leave</div>
+                              <div className="text-sm">Not available for assignments</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         crew.is_on_leave ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
@@ -398,8 +545,12 @@ const CrewManager: React.FC<CrewManagerProps> = ({
                     <div className="flex flex-wrap gap-1 justify-center">
                       {editingCrew?.id === crew.id ? (
                         <>
-                          <button onClick={saveEdit} className="text-green-600 text-xs px-2 py-1">Save</button>
-                          <button onClick={cancelEdit} className="text-gray-600 text-xs px-2 py-1">Cancel</button>
+                          <button onClick={saveEdit} className="text-green-600 dark:text-green-400 p-1" title="Save">
+                            <Check size={20} className="sm:w-4 sm:h-4" />
+                          </button>
+                          <button onClick={cancelEdit} className="text-gray-600 dark:text-gray-400 p-1" title="Cancel">
+                            <X size={20} className="sm:w-4 sm:h-4" />
+                          </button>
                         </>
                       ) : (
                         <>
